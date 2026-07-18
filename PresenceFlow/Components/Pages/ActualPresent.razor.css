@@ -1,0 +1,101 @@
+﻿.present-container {
+    min-height: 100vh;
+    width: 100%;
+    padding: 24px 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient( 180deg, #f6f8fb 0%, #eef2f7 100% );
+}
+
+.present-content {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Zurück-Link */
+.back-link {
+    display: inline-block;
+    margin-bottom: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: #007bff;
+}
+
+/* Titel */
+.title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+/* Untertitel */
+.subtitle {
+    font-size: 0.95rem;
+    color: #6c757d;
+    margin-bottom: 20px;
+}
+
+/* Info-Texte */
+.info-text {
+    font-size: 1.1rem;
+    text-align: center;
+    color: #6c757d;
+    margin-top: 32px;
+}
+
+/* Liste */
+.person-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Einzelne Person */
+.person-item {
+    padding: 16px 18px;
+    border-radius: 14px;
+    background-color: rgba(255,255,255,0.7);
+    margin-bottom: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+/* Name */
+.person-name {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+/* Zeit */
+.person-time {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.person-list-wrapper {
+    max-height: 65vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+@media (min-width: 768px) {
+    .present-content {
+        max-width: 640px;
+    }
+
+    .title {
+        font-size: 2rem;
+    }
+
+    .person-name {
+        font-size: 1.3rem;
+    }
+
+    .person-time {
+        font-size: 1rem;
+    }
+}

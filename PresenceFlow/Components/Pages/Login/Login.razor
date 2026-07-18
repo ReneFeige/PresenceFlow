@@ -1,0 +1,70 @@
+﻿@page "/login"
+@using PresenceFlow.Services
+@inject IMagicLinkAuthService MagicLinkAuthService
+
+<PageTitle>Anmeldung</PageTitle>
+
+<div class="login-container">
+
+    <div class="login-card">
+
+        <NavLink href="/" class="back-link">
+            ← Zurück
+        </NavLink>
+
+        <h2 class="title">Anmeldung</h2>
+
+        <p class="subtitle">
+            Bitte geben Sie Ihre E-Mail-Adresse ein.
+        </p>
+
+        <input class="email-input"
+               type="email"
+               placeholder="E-Mail-Adresse"
+               @bind="email"
+               disabled="@isBusy" />
+
+        <button class="login-button"
+                @onclick="SendLink"
+                disabled="@isBusy">
+            @if (isBusy)
+            {
+                <span>Wird gesendet…</span>
+            }
+            else
+            {
+                <span>Login-Link senden</span>
+            }
+        </button>
+
+        @if (message != null)
+        {
+            <p class="message">
+                @message
+            </p>
+        }
+
+    </div>
+
+</div>
+
+@code {
+    private string email = "";
+    private string? message;
+    private bool isBusy;
+
+    private async Task SendLink()
+    {
+        isBusy = true;
+        message = null;
+
+        // Magic-Link senden
+        var success = await MagicLinkAuthService.SendLoginLinkAsync(email);
+
+        message = success
+            ? "Der Anmeldelink wurde gesendet. Bitte überprüfen Sie Ihr E-Mail-Postfach."
+            : "Diese E-Mail-Adresse ist nicht autorisiert.";
+
+        isBusy = false;
+    }
+}

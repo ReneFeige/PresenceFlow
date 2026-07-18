@@ -1,0 +1,99 @@
+﻿@page "/login/magic"
+@using PresenceFlow.Models
+@using PresenceFlow.Services
+@inject IPresenceService PresenceService
+@inject IMagicLinkAuthService MagicLinkAuthService
+@inject IAuthCookieService AuthCookieService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Login</PageTitle>
+
+<div class="magic-container">
+
+    <div class="magic-card">
+
+        <h2 class="title">Anmeldung</h2>
+
+        @if (_state == State.Loading)
+        {
+            <p class="status-text neutral">
+                Login wird geprüft…
+            </p>
+        }
+        else if (_state == State.Success)
+        {
+            <p class="status-text success">
+                Login erfolgreich.<br />
+                Du wirst weitergeleitet…
+            </p>
+        }
+        else
+        {
+            <p class="status-text error">
+                Dieser Login-Link ist ungültig oder abgelaufen.
+            </p>
+
+            <NavLink href="/login" class="retry-link">
+                Erneut anmelden
+            </NavLink>
+        }
+
+    </div>
+
+</div>
+
+@code {
+    // Zustand der Seite / Login-Überprüfung
+    private enum State
+    {
+        Loading,
+        Success,
+        Error
+    }
+
+    private State _state = State.Loading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Token aus der URL auslesen
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var token = query["token"];
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            // Kein Token vorhanden -> Fehler
+            _state = State.Error;
+            return;
+        }
+
+        // Token prüfen und konsumieren / löschen
+        if (MagicLinkAuthService.ConsumeTokenAsync(token, out var email))
+        {
+            // Token gültig
+            _state = State.Success;
+
+            // Auth-Cookie für die angemeldete Person setzen
+            await AuthCookieService.SignInAsync(email);
+
+            // Person laden
+            var person = await PresenceService.GetPersonAsync(email);
+
+            // Falls abwesend -> direkt als anwesend melden
+            if (person?.Status == PresenceStatus.Absent)
+            {
+                await PresenceService.LoginAsync(person.Email);
+            }
+
+            await Task.Delay(1000);
+
+            // Weiterleiten zur Startseite
+            NavigationManager.NavigateTo("/");
+        }
+        else
+        {
+            // Token ungültig oder abgelaufen
+            _state = State.Error;
+        }
+    }
+}

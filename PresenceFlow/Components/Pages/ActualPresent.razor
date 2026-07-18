@@ -1,0 +1,110 @@
+﻿@page "/actualpresent"
+@using PresenceFlow.Models
+@using PresenceFlow.Services
+@using Microsoft.AspNetCore.SignalR.Client
+@implements IAsyncDisposable
+@inject IPresenceService PresenceService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Anwesende</PageTitle>
+
+<div class="present-container">
+    <div class="present-content">
+
+        <NavLink href="/" class="back-link">← Zur Anmeldung</NavLink>
+
+        <h2 class="title">Anwesende Personen</h2>
+
+        @if (IsLoading)
+        {
+            <p class="info-text">⏳ Lade Daten…</p>
+        }
+        else
+        {
+            <div class="subtitle">
+                Im Moment anwesend: <strong>@PresentCount</strong> 👥
+            </div>
+
+            @if (!PresentPeople.Any())
+            {
+                <p class="info-text">Im Moment ist niemand anwesend oder die Daten sind aktuell nicht verfügbar.</p>
+            }
+            else
+            {
+                <div class="person-list-wrapper">
+                    <ul class="person-list">
+                        @foreach (var person in PresentPeople)
+                        {
+                            <li class="person-item">
+                                <div class="person-name">
+                                    👤 @person.FirstName @person.LastName
+                                </div>
+                                <div class="person-time">
+                                    Anwesend seit @person.Timestamp?.ToString("HH:mm") Uhr
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+        }
+
+    </div>
+</div>
+
+@code {
+    private HubConnection? _hubConnection;      // SignalR-Verbindung
+    private IReadOnlyList<Person> PresentPeople = Array.Empty<Person>();
+    private int PresentCount;
+    private bool IsLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initiale Daten vom Service laden (HTTP Request)
+        var people = await PresenceService.GetPeopleAsync();
+
+        // Daten anwenden (Filtern & Sortieren)
+        ApplyData(people);
+        IsLoading = false;
+
+        // SignalR-Verbindung aufbauen
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/presenceHub"))   // Hub-URL
+            .WithAutomaticReconnect()
+            .Build();
+
+        // Listener für Updates von anderen Clients registrieren
+        _hubConnection.On<IReadOnlyList<Person>>("ReceiveUpdate", data =>
+        {
+            // Neue Daten anwenden
+            ApplyData(data);                
+
+            // UI aktualisieren
+            InvokeAsync(StateHasChanged);
+        });
+
+        // SignalR-Verbindung starten
+        await _hubConnection.StartAsync();
+    }
+
+    // Wendet die Daten auf lokale Properties an
+    private void ApplyData(IReadOnlyList<Person> people)
+    {
+        PresentPeople = people
+            .Where(p => p.Status == PresenceStatus.Present)      // Nur anwesende Personen
+            .OrderBy(p => p.Timestamp)                           // Sortieren nach Ankunftszeit
+            .ToList();
+
+        PresentCount = PresentPeople.Count;
+    }
+
+    // Dispose-Methode für asynchrone Bereinigung
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection != null)
+        {
+            // SignalR-Verbindung schließen
+            await _hubConnection.DisposeAsync();
+        }
+    }
+}

@@ -1,0 +1,227 @@
+﻿@page "/"
+@using PresenceFlow.Models
+@using PresenceFlow.Services
+@using Microsoft.AspNetCore.SignalR.Client
+@implements IAsyncDisposable
+@inject IPresenceService PresenceService
+@inject IAuthCookieService AuthCookieService
+@inject NavigationManager NavigationManager     /* Navigation innerhalb der App*/
+
+<PageTitle>Anmeldung</PageTitle>
+
+<div class="home-container">
+    <div class="status-card">
+
+        @if (!IsIoBrokerAvailable)
+        {
+            <div class="alert alert-warning">
+                ⚠️ Die Anwesenheitsdaten können momentan nicht geladen werden.<br />
+                Anmeldung ist vorübergehend deaktiviert.
+            </div>
+        }
+        else
+        {
+            @if (Person == null)
+            {
+                <img src="images/logo.svg" alt="Logo" class="logo" />
+            }
+
+
+            @if (IsLoading)
+            {
+                <p>⏳ Lade Daten…</p>
+            }
+
+            else if (Person != null)
+            {
+                <div class="person-name">
+                    Hallo @Person.FirstName
+                </div>
+
+                <div class="person-status @(Person.Status == PresenceStatus.Present ? "anwesend" : "abwesend")">
+                    @if (Person.Status == PresenceStatus.Present)
+                    {
+                        <span>🟢 Du bist aktuell anwesend</span>
+                    }
+                    else
+                    {
+                        <span>🔴 Du bist aktuell abwesend</span>
+                    }
+                </div>
+
+                <button class="action-button @ButtonCssClass" @onclick="LoginLogout">
+                    @ButtonText
+                </button>
+
+                @if (Success == false)
+                {
+                    <div class="alert alert-warning">
+                        ⚠️ Die Anwesenheitsdaten können momentan nicht übermittelt werden.<br />
+                        Anmeldung ist vorübergehend deaktiviert.
+                    </div>
+                }
+
+                <div class="present-count">
+                    Im Moment anwesend: <strong>@PresentCount</strong> 👥
+                </div>
+
+                <div class="logout-container">
+                    <p class="logout-text">
+                        Nicht @Person.FirstName? Gerät mit anderen teilen?
+                    </p>
+
+                    <button class="logout-button" @onclick="LogoutFromApp">
+                        Logout
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="not-logged-in">
+                    <p>Willkommen!</p>
+                    <p>Bitte melde dich an, um deine Anwesenheit zu erfassen.</p>
+                    <NavLink href="/login" class="login-link">Jetzt anmelden</NavLink>
+                </div>
+            }
+        }
+    </div>
+
+</div>
+
+@code {
+    private HubConnection? _hubConnection;      // SignalR-Verbindung
+    private int PresentCount;
+    private Person? Person;
+    private bool IsLoading = true;
+    private bool IsIoBrokerAvailable = true;
+    private bool Success = true;
+
+    // Wird beim Initialisieren der Komponente aufgerufen
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckIoBrokerAvailabilityAsync();
+
+        if (IsIoBrokerAvailable)
+        {
+            // Authentifizierungscookie prüfen
+            var auth = await AuthCookieService.GetAuthCookieAsync();
+
+            if (auth != null)
+            {
+                // Aktuelle Person laden
+                Person = await PresenceService.GetPersonAsync(auth.Email);
+            }
+
+            PresentCount = await PresenceService.GetPresentCountAsync();
+
+            // SignalR-Verbindung aufbauen
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(NavigationManager.ToAbsoluteUri("/presenceHub"))   // Hub-URL
+                .WithAutomaticReconnect()
+                .Build();
+
+            // Listener für Updates von anderen Clients registrieren
+            _hubConnection.On<IReadOnlyList<Person>>("ReceiveUpdate", people =>
+            {
+                PresentCount = people.Count(p => p.Status == PresenceStatus.Present);
+
+                // Person-Status aktualisieren, falls sich der eigene Status geändert hat
+                if (Person != null)
+                {
+                    Person = people.SingleOrDefault(p => p.Email == Person.Email);
+                }
+
+                // UI aktualisieren
+                InvokeAsync(StateHasChanged);
+            });
+
+            // SignalR-Verbindung starten
+            await _hubConnection.StartAsync();
+        }
+
+        IsLoading = false;
+    }
+
+    // Login oder Logout abhängig vom aktuellen Status
+    // LoginAsync/LogoutAsync aktualisieren den Status und benachrichtigen automatisch alle Clients über SignalR
+    private async Task LoginLogout()
+    {
+        if (Person == null)
+        {
+            return;
+        }
+
+        Success = Person.Status == PresenceStatus.Absent
+            ? await PresenceService.LoginAsync(Person.Email)
+            : await PresenceService.LogoutAsync(Person.Email);
+
+        if (Success)
+        {
+            // Status erneut vom Service laden, damit die UI sofort den aktuellen Status anzeigt
+            Person = await PresenceService.GetPersonAsync(Person.Email);
+        }
+    }
+
+    private async Task LogoutFromApp()
+    {
+        if (Person != null)
+        {
+            // authVersion erhöhen -> alle bestehenden Cookies werden ungültig
+            await PresenceService.UpdatePersonAuthVersionAsync(Person.Email, Person.AuthVersion + 1);
+
+            // Lokalen Zustand zurücksetzen
+            Person = null;
+
+            // SignalR-Verbindung schließen
+            if (_hubConnection != null)
+            {
+                await _hubConnection.DisposeAsync();
+                _hubConnection = null;
+            }
+
+            // Vollständiger Reload -> Cookie wird neu geprüft
+            NavigationManager.NavigateTo("/", forceLoad: true);
+        }
+    }
+
+    private async Task CheckIoBrokerAvailabilityAsync()
+    {
+        try
+        {
+            // echte HTTP-Anfrage absetzen, um zu prüfen, ob ioBroker antwortet
+            var people = await PresenceService.GetPeopleAsync();
+
+            if (people == null || people.Count == 0)
+            {
+                IsIoBrokerAvailable = false;
+            }
+            else
+            {
+                IsIoBrokerAvailable = true;
+            }
+        }
+        catch (HttpRequestException)
+        {
+            // Verbindung fehlgeschlagen
+            IsIoBrokerAvailable = false;
+        }
+        catch
+        {
+            // Sonstige Fehler
+            IsIoBrokerAvailable = false;
+        }
+    }
+
+    // Dispose-Methode für asynchrone Bereinigung
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection != null)
+        {
+            // SignalR-Verbindung schließen
+            await _hubConnection.DisposeAsync();
+        }
+    }
+
+    private string ButtonCssClass => Person?.Status == PresenceStatus.Absent ? "btn-danger" : "btn-success";
+    private string ButtonText => Person?.Status == PresenceStatus.Present ? "Abmelden" : "Anmelden";
+}
