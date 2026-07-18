@@ -50,7 +50,7 @@ namespace PresenceFlow.DataAccessLayer
 
         public async Task<bool> UpdateAuthVersionAsync(string email, int authVersion)
         {
-            var person = await _context.People.SingleOrDefaultAsync(p => p.Email == email);
+            var person = await _context.People.SingleOrDefaultAsync(p => p.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
 
             if (person != null)
             {
