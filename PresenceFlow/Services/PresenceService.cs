@@ -51,9 +51,9 @@ public class PresenceService : IPresenceService
     }
 
     // Gibt alle Personen und deren Status zurück
-    public async Task<IReadOnlyList<Person>> GetPeopleAsync()
+    public Task<IReadOnlyList<Person>> GetPeopleAsync()
     {
-        return await _repository.GetPeopleAsync();
+        return _repository.GetPeopleAsync();
     }
 
     public async Task<IReadOnlyList<Person>> GetPresentPeopleAsync()
@@ -75,13 +75,6 @@ public class PresenceService : IPresenceService
 
     public async Task<bool> UpdatePersonAuthVersionAsync(string email, int newAuthVersion)
     {
-        var person = await _repository.GetPersonAsync(email);
-
-        if (person == null)
-        {
-            return false;
-        }
-
         return await _repository.UpdateAuthVersionAsync(email, newAuthVersion);
     }
 
