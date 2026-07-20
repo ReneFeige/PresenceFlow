@@ -1,4 +1,5 @@
 ﻿using PresenceFlow.Auth;
+using PresenceFlow.DataAccessLayer;
 
 namespace PresenceFlow.Services
 {
@@ -7,10 +8,10 @@ namespace PresenceFlow.Services
         // IHttpContextAccessor ermöglicht den Zugriff auf den aktuellen HttpContext außerhalb von Controllern oder Middleware.
         // Wird hier benötigt, um Cookies zu setzen, zu lesen oder zu löschen (für Auth-Cookies).
         private readonly IHttpContextAccessor _httpContext;
-        private readonly IPresenceService _repository;
-        private const string CookieName = "IoBrokerWebAppAuth";
+        private readonly IPresenceRepository _repository;
+        private const string CookieName = "PresenceFlowAuth";
 
-        public AuthCookieService(IHttpContextAccessor httpContext, IPresenceService repository)
+        public AuthCookieService(IHttpContextAccessor httpContext, IPresenceRepository repository)
         {
             _httpContext = httpContext;
             _repository = repository;
@@ -18,9 +19,8 @@ namespace PresenceFlow.Services
 
         public async Task SignInAsync(string email)
         {
-            // Person aus ioBroker laden, um die aktuelle AuthVersion zu bekommen
-            var people = await _repository.GetPeopleAsync();
-            var person = people.SingleOrDefault(p => p.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+            // Person laden, um die aktuelle AuthVersion zu bekommen
+            var person = await _repository.GetPersonAsync(email);
 
             if (person == null || _httpContext.HttpContext == null)
             {
@@ -64,9 +64,8 @@ namespace PresenceFlow.Services
                     return null;
                 }
 
-                // Aktuelle Person aus ioBroker holen
-                var people = await _repository.GetPeopleAsync();
-                var person = people.SingleOrDefault(p => p.Email.Equals(cookie.Email, StringComparison.OrdinalIgnoreCase));
+                // Aktuelle Person aus Datenbank holen
+                var person = await _repository.GetPersonAsync(cookie.Email);
 
                 if (person == null)
                 {
