@@ -1,16 +1,17 @@
 ﻿using PresenceFlow.Auth;
+using PresenceFlow.DataAccessLayer;
 
 namespace PresenceFlow.Services
 {
     public class MagicLinkAuthService : IMagicLinkAuthService
     {
-        private readonly IPresenceService _repository;
+        private readonly IPresenceRepository _repository;
         private readonly IEmailService _emailService;
         private readonly LoginTokenStore _tokenStore;
         private readonly string _baseUrl;
 
         // Konstruktor: Abhängigkeiten und BaseUrl laden
-        public MagicLinkAuthService(IPresenceService repository, IEmailService emailService, LoginTokenStore tokenStore, IConfiguration config)
+        public MagicLinkAuthService(IPresenceRepository repository, IEmailService emailService, LoginTokenStore tokenStore, IConfiguration config)
         {
             _repository = repository;
             _emailService = emailService;
@@ -23,8 +24,7 @@ namespace PresenceFlow.Services
         public async Task<bool> SendLoginLinkAsync(string email)
         {
             // Prüfen, ob die Person existiert
-            var people = await _repository.GetPeopleAsync();
-            var person = people.SingleOrDefault(p => p.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+            var person = await _repository.GetPersonAsync(email);
 
             if (person == null)
             { 
@@ -118,7 +118,7 @@ Diese E-Mail wurde automatisch erstellt. Bitte antworten Sie nicht darauf.
         }
 
         // Prüft und konsumiert (entfernt) einen Token, gibt die zugehörige E-Mail zurück
-        public bool ConsumeTokenAsync(string token, out string email)
+        public bool ConsumeToken(string token, out string email)
             => _tokenStore.TryConsume(token, out email);
     }
 }

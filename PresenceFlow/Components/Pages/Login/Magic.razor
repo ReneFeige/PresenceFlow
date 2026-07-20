@@ -68,7 +68,7 @@
         }
 
         // Token prüfen und konsumieren / löschen
-        if (MagicLinkAuthService.ConsumeTokenAsync(token, out var email))
+        if (MagicLinkAuthService.ConsumeToken(token, out var email))
         {
             // Token gültig
             _state = State.Success;
