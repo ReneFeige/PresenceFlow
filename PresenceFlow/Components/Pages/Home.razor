@@ -12,7 +12,7 @@
 <div class="home-container">
     <div class="status-card">
 
-        @if (!IsIoBrokerAvailable)
+        @if (!IsStorageAvailable)
         {
             <div class="alert alert-warning">
                 ⚠️ Die Anwesenheitsdaten können momentan nicht geladen werden.<br />
@@ -93,15 +93,15 @@
     private int PresentCount;
     private Person? Person;
     private bool IsLoading = true;
-    private bool IsIoBrokerAvailable = true;
+    private bool IsStorageAvailable = true;
     private bool Success = true;
 
     // Wird beim Initialisieren der Komponente aufgerufen
     protected override async Task OnInitializedAsync()
     {
-        await CheckIoBrokerAvailabilityAsync();
+        await CheckStorageAvailabilityAsync();
 
-        if (IsIoBrokerAvailable)
+        if (IsStorageAvailable)
         {
             // Authentifizierungscookie prüfen
             var auth = await AuthCookieService.GetAuthCookieAsync();
@@ -128,7 +128,7 @@
                 // Person-Status aktualisieren, falls sich der eigene Status geändert hat
                 if (Person != null)
                 {
-                    Person = people.SingleOrDefault(p => p.Email == Person.Email);
+                    Person = people.SingleOrDefault(p => p.Email.Equals(Person.Email, StringComparison.OrdinalIgnoreCase));
                 }
 
                 // UI aktualisieren
@@ -164,51 +164,38 @@
 
     private async Task LogoutFromApp()
     {
-        if (Person != null)
+        if (Person == null)
         {
-            // authVersion erhöhen -> alle bestehenden Cookies werden ungültig
-            await PresenceService.UpdatePersonAuthVersionAsync(Person.Email, Person.AuthVersion + 1);
-
-            // Lokalen Zustand zurücksetzen
-            Person = null;
-
-            // SignalR-Verbindung schließen
-            if (_hubConnection != null)
-            {
-                await _hubConnection.DisposeAsync();
-                _hubConnection = null;
-            }
-
-            // Vollständiger Reload -> Cookie wird neu geprüft
-            NavigationManager.NavigateTo("/", forceLoad: true);
+            return;
         }
+
+        // authVersion erhöhen -> alle bestehenden Cookies werden ungültig
+        await PresenceService.UpdatePersonAuthVersionAsync(Person.Email, Person.AuthVersion + 1);
+
+        // Lokalen Zustand zurücksetzen
+        Person = null;
+
+        // SignalR-Verbindung schließen
+        if (_hubConnection != null)
+        {
+            await _hubConnection.DisposeAsync();
+            _hubConnection = null;
+        }
+
+        // Vollständiger Reload -> Cookie wird neu geprüft
+        NavigationManager.NavigateTo("/", forceLoad: true);
     }
 
-    private async Task CheckIoBrokerAvailabilityAsync()
+    private async Task CheckStorageAvailabilityAsync()
     {
         try
         {
-            // echte HTTP-Anfrage absetzen, um zu prüfen, ob ioBroker antwortet
-            var people = await PresenceService.GetPeopleAsync();
-
-            if (people == null || people.Count == 0)
-            {
-                IsIoBrokerAvailable = false;
-            }
-            else
-            {
-                IsIoBrokerAvailable = true;
-            }
-        }
-        catch (HttpRequestException)
-        {
-            // Verbindung fehlgeschlagen
-            IsIoBrokerAvailable = false;
+            await PresenceService.GetPeopleAsync();
+            IsStorageAvailable = true;
         }
         catch
         {
-            // Sonstige Fehler
-            IsIoBrokerAvailable = false;
+            IsStorageAvailable = false;
         }
     }
 

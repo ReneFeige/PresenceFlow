@@ -9,7 +9,7 @@ public class PresenceService : IPresenceService
     private readonly IPresenceRepository _repository;
     private readonly IHubContext<PresenceHub> _hub;
 
-    // Konstruktor: IoBroker-Client und HubContext injizieren
+    // Konstruktor: IPresenceRepository und HubContext injizieren
     public PresenceService(IPresenceRepository repository, IHubContext<PresenceHub> hub)
     {
         _repository = repository;
