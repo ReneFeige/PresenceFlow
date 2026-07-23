@@ -32,7 +32,7 @@ namespace PresenceFlow.Middleware
             IAuthCookieService authCookieService)
         {
             // Prüfen, ob das Auth-Cookie existiert
-            if (context.Request.Cookies.ContainsKey("IoBrokerWebAppAuth"))
+            if (context.Request.Cookies.ContainsKey("PresenceFlowAuth"))
             {
                 // Cookie nur verlängern, wenn es gültig ist
                 await authCookieService.RefreshAsync();
