@@ -67,6 +67,8 @@ if (storageProvider.Equals("SQLite", StringComparison.OrdinalIgnoreCase))
         scope.ServiceProvider.GetRequiredService<PresenceDbContext>();
 
     await dbContext.Database.MigrateAsync();
+
+    await PresenceDbSeeder.SeedAsync(dbContext);
 }
 
 // Configure the HTTP request pipeline.
