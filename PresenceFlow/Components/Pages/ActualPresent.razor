@@ -25,9 +25,11 @@
                 Im Moment anwesend: <strong>@PresentCount</strong> 👥
             </div>
 
-            @if (!PresentPeople.Any())
+            @if (PresentPeople.Count == 0)
             {
-                <p class="info-text">Im Moment ist niemand anwesend oder die Daten sind aktuell nicht verfügbar.</p>
+                <p class="info-text">
+                    Im Moment ist niemand anwesend.
+                </p>
             }
             else
             {
@@ -37,10 +39,11 @@
                         {
                             <li class="person-item">
                                 <div class="person-name">
-                                    👤 @person.FirstName @person.LastName
+                                    👤 @GetDisplayName(person)
                                 </div>
+
                                 <div class="person-time">
-                                    Anwesend seit @person.Timestamp?.ToString("HH:mm") Uhr
+                                    @GetPresenceTimeText(person)
                                 </div>
                             </li>
                         }
@@ -55,7 +58,7 @@
 @code {
     private HubConnection? _hubConnection;      // SignalR-Verbindung
     private IReadOnlyList<Person> PresentPeople = Array.Empty<Person>();
-    private int PresentCount;
+    private int PresentCount => PresentPeople.Count;
     private bool IsLoading = true;
 
     protected override async Task OnInitializedAsync()
@@ -92,11 +95,30 @@
     {
         PresentPeople = people
             .Where(p => p.Status == PresenceStatus.Present)      // Nur anwesende Personen
-            .OrderBy(p => p.Timestamp)                           // Sortieren nach Ankunftszeit
+            .OrderBy(p => p.Timestamp ?? DateTime.MaxValue)      // Sortieren nach Ankunftszeit
+            .ThenBy(person => person.LastName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(person => person.FirstName, StringComparer.OrdinalIgnoreCase)
             .ToList();
-
-        PresentCount = PresentPeople.Count;
     }
+
+    private static string GetDisplayName(Person person)
+    {
+        var fullName = $"{person.FirstName} {person.LastName}".Trim();
+
+        // Email-Adresse anzeigen, sollte der Name fehlen
+        return string.IsNullOrWhiteSpace(fullName)
+            ? person.Email
+            : fullName;
+    }
+
+    private static string GetPresenceTimeText(Person person)
+    {
+        return person.Timestamp.HasValue
+            ? $"Anwesend seit " +
+              $"{person.Timestamp.Value:HH:mm} Uhr"
+            : "Anwesenheitszeit nicht verfügbar";
+    }
+
 
     // Dispose-Methode für asynchrone Bereinigung
     public async ValueTask DisposeAsync()
