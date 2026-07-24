@@ -59,17 +59,7 @@ builder.Services.AddSignalR();
 
 var app = builder.Build();
 
-if (storageProvider.Equals("SQLite", StringComparison.OrdinalIgnoreCase))
-{
-    using var scope = app.Services.CreateScope();
-
-    var dbContext =
-        scope.ServiceProvider.GetRequiredService<PresenceDbContext>();
-
-    await dbContext.Database.MigrateAsync();
-
-    await PresenceDbSeeder.SeedAsync(dbContext);
-}
+await app.InitializePresenceDatabaseAsync(storageProvider);
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
