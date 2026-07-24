@@ -61,8 +61,10 @@ public class PresenceService : IPresenceService
         var people = await _repository.GetPeopleAsync();
 
         return people
-            .Where(p => p.Status == PresenceStatus.Present)
-            .OrderBy(p => p.Timestamp)
+            .Where(p => p.Status == PresenceStatus.Present)      // Nur anwesende Personen
+            .OrderBy(p => p.Timestamp ?? DateTime.MaxValue)      // Sortieren nach Ankunftszeit
+            .ThenBy(person => person.LastName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(person => person.FirstName, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
