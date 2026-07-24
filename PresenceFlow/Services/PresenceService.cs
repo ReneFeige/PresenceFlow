@@ -81,7 +81,7 @@ public class PresenceService : IPresenceService
     // Benachrichtigt alle verbundenen Clients über SignalR, dass sich die Präsenzdaten geändert haben
     private async Task NotifyClientsAsync()
     {
-        var data = await _repository.GetPeopleAsync();
-        await _hub.Clients.All.SendAsync("ReceiveUpdate", data);
+        var people = await _repository.GetPeopleAsync();
+        await _hub.Clients.All.SendAsync("ReceiveUpdate", people);
     }
 }

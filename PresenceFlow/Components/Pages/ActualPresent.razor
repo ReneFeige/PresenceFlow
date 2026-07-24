@@ -74,10 +74,10 @@
             .Build();
 
         // Listener für Updates von anderen Clients registrieren
-        _hubConnection.On<IReadOnlyList<Person>>("ReceiveUpdate", data =>
+        _hubConnection.On<IReadOnlyList<Person>>("ReceiveUpdate", people =>
         {
             // Neue Daten anwenden
-            ApplyData(data);                
+            ApplyData(people);
 
             // UI aktualisieren
             InvokeAsync(StateHasChanged);
