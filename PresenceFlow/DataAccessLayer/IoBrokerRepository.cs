@@ -36,19 +36,27 @@
 
                 var jsonElement = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-                // Zugriff auf die 'val'-Eigenschaft (value) von ioBroker
-                if (jsonElement.TryGetProperty("val", out var valElement))
+                // 'val' existiert nicht oder hat unerwartete Struktur
+                if (!jsonElement.TryGetProperty("val", out var valElement))
                 {
-                    var peopleData = valElement.Deserialize<PeopleData>();
-                    return peopleData?.People ?? [];
+                    return [];
                 }
 
-                // 'val' existiert nicht oder hat unerwartete Struktur
+                // Zugriff auf die 'val'-Eigenschaft (value) von ioBroker
+                var peopleData = valElement.Deserialize<PeopleData>();
+
+                return peopleData?.People ?? [];
+            }
+            catch (HttpRequestException)
+            {
                 return [];
             }
-            catch (Exception)
+            catch (JsonException)
             {
-                // Alles weitere, was schiefgehen könnte (Verbindungsfehler, JSON, ...)
+                return [];
+            }
+            catch (NotSupportedException)
+            {
                 return [];
             }
         }
@@ -62,45 +70,63 @@
         }
 
         // Setzt den Präsenzstatus einer Person und aktualisiert ioBroker
-        public async Task<bool> SetPresenceAsync(string email, PresenceStatus newStatus)
+        public async Task<bool> SetPresenceAsync(string email, PresenceStatus status)
         {
             // Aktuelle Personen-Daten holen
-            var peopleData = await GetPeopleAsync();
-            if (peopleData == null)
-            {
-                return false;
-            }
+            var people = await GetPeopleAsync();
 
             // Person anhand der E-Mail finden
-            var person = peopleData.SingleOrDefault(p => p.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+            var person = people.SingleOrDefault(p => p.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+          
             if (person == null)
             {
                 return false;
             }
 
             // Prüfen, ob Status bereits korrekt ist
-            if (person.Status == newStatus)
+            if (person.Status == status)
             {
                 return true;
             }
 
             // Status ändern
-            person.UpdateStatus(newStatus);
+            person.UpdateStatus(status);
 
-            // Payload (JSON) für API-Requests vorbereiten
-            var payloadPeople = new { val = peopleData };
-
-            // Personen-Objekt im ioBroker aktualisieren
-            var responsePeople = await _httpClient.PutAsJsonAsync(_personenUrl, payloadPeople);
-
-            // True zurückgeben, wenn Request erfolgreich war
-            return responsePeople.IsSuccessStatusCode;
+            return await SavePeopleAsync(people);
         }
 
-        public async Task<bool> UpdateAuthVersionAsync(PeopleData peopleData)
+        public async Task<bool> UpdateAuthVersionAsync(string email, int authVersion)
         {
-            // Meta-Daten aktualisieren
-            peopleData.Timestamp = DateTime.Now;
+            var people = await GetPeopleAsync();
+
+            var person = people.SingleOrDefault(p => p.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+
+            if (person == null)
+            {
+                return false;
+            }
+
+            if (person.AuthVersion == authVersion)
+            {
+                return true;
+            }
+
+            person.AuthVersion = authVersion;
+
+            return await SavePeopleAsync(people);
+        }
+
+        private async Task<bool> SavePeopleAsync(IReadOnlyList<Person> people)
+        {
+            var now = DateTime.Now;
+
+            var peopleData = new PeopleData
+            {
+                Timestamp = now,
+                Version = now.Ticks.ToString(),
+                PresentCount = people.Count(p => p.Status == PresenceStatus.Present),
+                People = people.ToList()
+            };
 
             var payload = new
             {
@@ -111,11 +137,6 @@
             var response = await _httpClient.PutAsJsonAsync(_personenUrl, payload);
 
             return response.IsSuccessStatusCode;
-        }
-
-        public Task<bool> UpdateAuthVersionAsync(string email, int authVersion)
-        {
-            throw new NotImplementedException();
         }
     }
 }
