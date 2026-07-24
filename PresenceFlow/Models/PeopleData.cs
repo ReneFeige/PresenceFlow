@@ -1,6 +1,4 @@
-﻿using PresenceFlow.Models;
-
-namespace IoBroker_WebApp.Models
+﻿namespace PresenceFlow.Models
 {
     public class PeopleData
     {

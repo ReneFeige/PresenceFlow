@@ -23,7 +23,7 @@ namespace PresenceFlow.Models
         }
     }
 
-    // schreibt und liest anwesend / abwesend als string in ioBroker
+    // schreibt und liest anwesend / abwesend als string
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum PresenceStatus
     {
