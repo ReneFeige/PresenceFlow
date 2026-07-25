@@ -44,6 +44,20 @@
             </p>
         }
 
+        @if (loginLink != null)
+        {
+            <div class="magic-link-container">
+                <p>
+                    Der lokale Anmeldelink wurde erstellt:
+                </p>
+
+                <a href="@loginLink"
+                   class="login-link">
+                    Jetzt anmelden
+                </a>
+            </div>
+        }
+
     </div>
 
 </div>
@@ -51,20 +65,42 @@
 @code {
     private string email = "";
     private string? message;
+    private string? loginLink;
     private bool isBusy;
 
     private async Task SendLink()
     {
         isBusy = true;
         message = null;
+        loginLink = null;
 
-        // Magic-Link senden
-        var success = await MagicLinkAuthService.SendLoginLinkAsync(email);
+        try
+        {
+            // Magic-Link senden
+            var result = await MagicLinkAuthService.SendLoginLinkAsync(email);
 
-        message = success
-            ? "Der Anmeldelink wurde gesendet. Bitte überprüfen Sie Ihr E-Mail-Postfach."
-            : "Diese E-Mail-Adresse ist nicht autorisiert.";
+            if (!result.Success)
+            {
+                message = "Diese E-Mail-Adresse ist nicht autorisiert.";
 
-        isBusy = false;
+                return;
+            }
+
+            if (result.LoginLink != null)
+            {
+                loginLink = result.LoginLink;
+
+                message = "Der Anmeldelink wurde lokal erstellt.";
+            }
+            else
+            {
+                message = "Der Anmeldelink wurde gesendet. " +
+                    "Bitte überprüfen Sie Ihr E-Mail-Postfach.";
+            }
+        }
+        finally
+        {
+            isBusy = false;
+        }
     }
 }
