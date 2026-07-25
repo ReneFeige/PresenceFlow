@@ -48,27 +48,28 @@ namespace PresenceFlow.Services
             _tokenStore.Add(token, email, lifetime);
 
             // Login-Link zusammenstellen
-            var link = $"{_baseUrl}/login/magic?token={token}";
+            var relativeLink = $"/login/magic?token={token}";
 
             if (_magicLinkProvider.Equals("UI", StringComparison.OrdinalIgnoreCase))
             {
                 return new MagicLinkSendResult
                 {
                     Success = true,
-                    LoginLink = link
+                    LoginLink = relativeLink
                 };
             }
 
             if (_magicLinkProvider.Equals("Email", StringComparison.OrdinalIgnoreCase))
             {
+                var absoluteLink = $"{_baseUrl.TrimEnd('/')}{relativeLink}";
 
                 var textBody = CreateTextBody(
-                    link,
+                    absoluteLink,
                     lifetimeMinutes);
 
                 var htmlBody = CreateHtmlBody(
                     person.FirstName,
-                    link,
+                    absoluteLink,
                     lifetimeMinutes);
 
                 // E-Mail-Service nur bei Bedarf aus dem DI-Container laden
