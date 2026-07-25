@@ -164,13 +164,11 @@
 
     private async Task LogoutFromApp()
     {
-        if (Person == null)
+        if (Person != null)
         {
-            return;
+            // authVersion erhöhen -> alle bestehenden Cookies werden ungültig
+            await PresenceService.UpdatePersonAuthVersionAsync(Person.Email, Person.AuthVersion + 1);
         }
-
-        // authVersion erhöhen -> alle bestehenden Cookies werden ungültig
-        await PresenceService.UpdatePersonAuthVersionAsync(Person.Email, Person.AuthVersion + 1);
 
         // SignalR-Verbindung schließen
         if (_hubConnection != null)
