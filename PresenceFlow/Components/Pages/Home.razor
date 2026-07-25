@@ -204,6 +204,6 @@
         }
     }
 
-    private string ButtonCssClass => Person?.Status == PresenceStatus.Absent ? "btn-danger" : "btn-success";
+    private string ButtonCssClass => Person?.Status == PresenceStatus.Absent ? "btn-success" : "btn-danger";
     private string ButtonText => Person?.Status == PresenceStatus.Present ? "Abmelden" : "Anmelden";
 }
