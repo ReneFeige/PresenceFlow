@@ -1,6 +1,4 @@
 ﻿@page "/login"
-@using PresenceFlow.Services
-@inject IMagicLinkAuthService MagicLinkAuthService
 
 <PageTitle>Anmeldung</PageTitle>
 
@@ -21,13 +19,13 @@
         <input class="email-input"
                type="email"
                placeholder="E-Mail-Adresse"
-               @bind="email"
-               disabled="@isBusy" />
+               @bind="Email"
+               disabled="@IsBusy" />
 
         <button class="login-button"
                 @onclick="SendLink"
-                disabled="@isBusy">
-            @if (isBusy)
+                disabled="@IsBusy">
+            @if (IsBusy)
             {
                 <span>Wird gesendet…</span>
             }
@@ -37,21 +35,21 @@
             }
         </button>
 
-        @if (message != null)
+        @if (Message != null)
         {
             <p class="message">
-                @message
+                @Message
             </p>
         }
 
-        @if (loginLink != null)
+        @if (LoginLink != null)
         {
             <div class="magic-link-container">
                 <p>
                     Der lokale Anmeldelink wurde erstellt:
                 </p>
 
-                <a href="@loginLink"
+                <a href="@LoginLink"
                    class="login-link">
                     Jetzt anmelden
                 </a>
@@ -61,46 +59,3 @@
     </div>
 
 </div>
-
-@code {
-    private string email = "";
-    private string? message;
-    private string? loginLink;
-    private bool isBusy;
-
-    private async Task SendLink()
-    {
-        isBusy = true;
-        message = null;
-        loginLink = null;
-
-        try
-        {
-            // Magic-Link senden
-            var result = await MagicLinkAuthService.SendLoginLinkAsync(email);
-
-            if (!result.Success)
-            {
-                message = "Diese E-Mail-Adresse ist nicht autorisiert.";
-
-                return;
-            }
-
-            if (result.LoginLink != null)
-            {
-                loginLink = result.LoginLink;
-
-                message = "Der Anmeldelink wurde lokal erstellt.";
-            }
-            else
-            {
-                message = "Der Anmeldelink wurde gesendet. " +
-                    "Bitte überprüfen Sie Ihr E-Mail-Postfach.";
-            }
-        }
-        finally
-        {
-            isBusy = false;
-        }
-    }
-}

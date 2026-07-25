@@ -1,10 +1,5 @@
 ﻿@page "/actualpresent"
-@using PresenceFlow.Models
-@using PresenceFlow.Services
-@using Microsoft.AspNetCore.SignalR.Client
 @implements IAsyncDisposable
-@inject IPresenceService PresenceService
-@inject NavigationManager NavigationManager
 
 <PageTitle>Anwesende</PageTitle>
 
@@ -54,79 +49,3 @@
 
     </div>
 </div>
-
-@code {
-    private HubConnection? _hubConnection;      // SignalR-Verbindung
-    private IReadOnlyList<Person> PresentPeople = Array.Empty<Person>();
-    private int PresentCount => PresentPeople.Count;
-    private bool IsLoading = true;
-
-    protected override async Task OnInitializedAsync()
-    {
-        // Initiale Daten vom Service laden (HTTP Request)
-        var people = await PresenceService.GetPeopleAsync();
-
-        // Daten anwenden (Filtern & Sortieren)
-        ApplyData(people);
-        IsLoading = false;
-
-        // SignalR-Verbindung aufbauen
-        _hubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/presenceHub"))   // Hub-URL
-            .WithAutomaticReconnect()
-            .Build();
-
-        // Listener für Updates von anderen Clients registrieren
-        _hubConnection.On<IReadOnlyList<Person>>("ReceiveUpdate", people =>
-        {
-            // Neue Daten anwenden
-            ApplyData(people);
-
-            // UI aktualisieren
-            InvokeAsync(StateHasChanged);
-        });
-
-        // SignalR-Verbindung starten
-        await _hubConnection.StartAsync();
-    }
-
-    // Wendet die Daten auf lokale Properties an
-    private void ApplyData(IReadOnlyList<Person> people)
-    {
-        PresentPeople = people
-            .Where(p => p.Status == PresenceStatus.Present)      // Nur anwesende Personen
-            .OrderBy(p => p.Timestamp ?? DateTime.MaxValue)      // Sortieren nach Ankunftszeit
-            .ThenBy(person => person.LastName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(person => person.FirstName, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static string GetDisplayName(Person person)
-    {
-        var fullName = $"{person.FirstName} {person.LastName}".Trim();
-
-        // Email-Adresse anzeigen, sollte der Name fehlen
-        return string.IsNullOrWhiteSpace(fullName)
-            ? person.Email
-            : fullName;
-    }
-
-    private static string GetPresenceTimeText(Person person)
-    {
-        return person.Timestamp.HasValue
-            ? $"Anwesend seit " +
-              $"{person.Timestamp.Value:HH:mm} Uhr"
-            : "Anwesenheitszeit nicht verfügbar";
-    }
-
-
-    // Dispose-Methode für asynchrone Bereinigung
-    public async ValueTask DisposeAsync()
-    {
-        if (_hubConnection != null)
-        {
-            // SignalR-Verbindung schließen
-            await _hubConnection.DisposeAsync();
-        }
-    }
-}
