@@ -23,8 +23,10 @@ namespace PresenceFlow.DataAccessLayer
 
         public async Task<Person?> GetPersonAsync(string email)
         {
+            var normalizedEmail = email.Trim().ToLowerInvariant();
+
             return await _context.People
-                .SingleOrDefaultAsync(p => p.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+                .SingleOrDefaultAsync(p => p.Email == normalizedEmail);
         }
 
         public async Task<bool> SetPresenceAsync(string email, PresenceStatus status)
