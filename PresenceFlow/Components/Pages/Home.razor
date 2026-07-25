@@ -172,9 +172,6 @@
         // authVersion erhöhen -> alle bestehenden Cookies werden ungültig
         await PresenceService.UpdatePersonAuthVersionAsync(Person.Email, Person.AuthVersion + 1);
 
-        // Lokalen Zustand zurücksetzen
-        Person = null;
-
         // SignalR-Verbindung schließen
         if (_hubConnection != null)
         {
@@ -183,7 +180,7 @@
         }
 
         // Vollständiger Reload -> Cookie wird neu geprüft
-        NavigationManager.NavigateTo("/", forceLoad: true);
+        NavigationManager.NavigateTo("/auth/logout", forceLoad: true);
     }
 
     private async Task CheckStorageAvailabilityAsync()

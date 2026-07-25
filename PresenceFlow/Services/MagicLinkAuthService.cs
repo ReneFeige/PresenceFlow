@@ -45,10 +45,10 @@ namespace PresenceFlow.Services
             var lifetimeMinutes = (int)lifetime.TotalMinutes;
 
             // Token im Speicher ablegen
-            _tokenStore.Add(token, email, lifetime);
+            _tokenStore.Add(token, person.Email, lifetime);
 
             // Login-Link zusammenstellen
-            var relativeLink = $"/login/magic?token={token}";
+            var relativeLink = $"/auth/magic?token={token}";
 
             if (_magicLinkProvider.Equals("UI", StringComparison.OrdinalIgnoreCase))
             {
@@ -76,7 +76,7 @@ namespace PresenceFlow.Services
                 var emailService = _serviceProvider.GetRequiredService<IEmailService>();
 
                 await emailService.SendAsync(
-                    email,
+                    person.Email,
                     "Dein Login-Link",
                     textBody,
                     htmlBody
@@ -91,8 +91,7 @@ namespace PresenceFlow.Services
             throw new InvalidOperationException(
                     $"Unbekannter Magic-Link-Provider: " +
                     $"'{_magicLinkProvider}'. " +
-                    "Erlaubte Werte sind 'UI' " +
-                    "und 'Email'.");
+                    "Erlaubte Werte sind 'UI' und 'Email'.");
         }
 
         // Prüft und konsumiert (entfernt) einen Token, gibt die zugehörige E-Mail zurück

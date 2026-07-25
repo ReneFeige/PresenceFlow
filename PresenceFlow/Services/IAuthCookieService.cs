@@ -4,7 +4,7 @@ namespace PresenceFlow.Services
 {
     public interface IAuthCookieService
     {
-        Task SignInAsync(string email);
+        Task<bool> SignInAsync(string email);
         Task<AuthCookie?> GetAuthCookieAsync();
         Task SignOutAsync();
         Task RefreshAsync();

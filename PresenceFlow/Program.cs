@@ -1,11 +1,12 @@
+using Microsoft.EntityFrameworkCore;
 using PresenceFlow.Auth;
 using PresenceFlow.Components;
+using PresenceFlow.Data;
 using PresenceFlow.DataAccessLayer;
 using PresenceFlow.Hubs;
 using PresenceFlow.Middleware;
+using PresenceFlow.Models;
 using PresenceFlow.Services;
-using PresenceFlow.Data;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,6 +78,52 @@ app.UseMiddleware<AuthCookieRefreshMiddleware>();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+
+app.MapGet(
+    "/auth/magic",
+    async (
+        string? token,
+        IMagicLinkAuthService magicLinkAuthService,
+        IAuthCookieService authCookieService,
+        IPresenceService presenceService) =>
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return Results.Redirect("/login");
+        }
+
+        if (!magicLinkAuthService.ConsumeToken(token, out var email))
+        {
+            return Results.Redirect("/login");
+        }
+
+        var cookieCreated = await authCookieService.SignInAsync(email);
+
+        if (!cookieCreated)
+        {
+            return Results.Redirect("/login");
+        }
+
+        var person = await presenceService.GetPersonAsync(email);
+
+        if (person?.Status == PresenceStatus.Absent)
+        {
+            await presenceService.LoginAsync(person.Email);
+        }
+
+        return Results.Redirect("/");
+    });
+
+app.MapGet(
+    "/auth/logout",
+    async (
+        IAuthCookieService authCookieService) =>
+    {
+        await authCookieService.SignOutAsync();
+
+        return Results.Redirect("/");
+    });
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

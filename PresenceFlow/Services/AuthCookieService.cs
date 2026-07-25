@@ -1,4 +1,5 @@
-﻿using PresenceFlow.Auth;
+﻿using System.Text.Json;
+using PresenceFlow.Auth;
 using PresenceFlow.DataAccessLayer;
 
 namespace PresenceFlow.Services
@@ -17,40 +18,38 @@ namespace PresenceFlow.Services
             _repository = repository;
         }
 
-        public async Task SignInAsync(string email)
+        public async Task<bool> SignInAsync(string email)
         {
             // Person laden, um die aktuelle AuthVersion zu bekommen
             var person = await _repository.GetPersonAsync(email);
+            var httpContext = _httpContext.HttpContext;
 
-            if (person == null || _httpContext.HttpContext == null)
+            if (person == null || httpContext == null)
             {
-                return;
+                return false;
             }
 
-            var cookieObj = new AuthCookie
+            var cookie = new AuthCookie
             {
                 Email = person.Email,
                 AuthVersion = person.AuthVersion
             };
 
-            var cookieValue = System.Text.Json.JsonSerializer.Serialize(cookieObj);
+            var cookieValue = JsonSerializer.Serialize(cookie);
 
-            _httpContext.HttpContext.Response.Cookies.Append(
+            httpContext.Response.Cookies.Append(
                 CookieName,
                 cookieValue,
-                new CookieOptions
-                {
-                    HttpOnly = true,
-                    Secure = true,
-                    SameSite = SameSiteMode.Lax,
-                    Expires = DateTimeOffset.Now.AddDays(30)
-                }
-            );
+                CreateCookieOptions(
+                    SameSiteMode.Lax));
+
+            return true;
         }
 
         public async Task<AuthCookie?> GetAuthCookieAsync()
         {
             var cookieValue = _httpContext.HttpContext?.Request.Cookies[CookieName];
+
             if (string.IsNullOrWhiteSpace(cookieValue))
             {
                 return null;
@@ -58,8 +57,9 @@ namespace PresenceFlow.Services
 
             try
             {
-                var cookie = System.Text.Json.JsonSerializer.Deserialize<AuthCookie>(cookieValue);
-                if (cookie == null)
+                var cookie = JsonSerializer.Deserialize<AuthCookie>(cookieValue);
+
+                if (cookie == null || string.IsNullOrWhiteSpace(cookie.Email))
                 {
                     return null;
                 }
@@ -69,23 +69,19 @@ namespace PresenceFlow.Services
 
                 if (person == null)
                 {
-                    // Person existiert nicht mehr -> Cookie löschen / abmelden
-                    await SignOutAsync();
                     return null;
                 }
 
                 // AuthVersion prüfen
                 if (cookie.AuthVersion != person.AuthVersion)
                 {
-                    // AuthVersion nicht mehr gültig -> Cookie löschen / abmelden
-                    await SignOutAsync();
                     return null;
                 }
 
                 // Alles gut -> Cookie zurückgeben
                 return cookie;
             }
-            catch
+            catch (JsonException)
             {
                 // Ungültiges Cookie-Format -> ignorieren
                 return null;
@@ -94,10 +90,15 @@ namespace PresenceFlow.Services
 
         public Task SignOutAsync()
         {
-            if (_httpContext.HttpContext != null)
+            var httpContext = _httpContext.HttpContext;
+
+            if (httpContext != null)
             {
                 // Auth-Cookie löschen -> Benutzer ist abgemeldet
-                _httpContext.HttpContext.Response.Cookies.Delete(CookieName);
+                httpContext.Response.Cookies.Delete(
+                    CookieName,
+                    CreateCookieOptions(
+                        SameSiteMode.Lax));
             }
             // Aktuell keine asynchrone Methode
             // Durch Task.CompletedTask ist die Methode awaitable
@@ -107,9 +108,18 @@ namespace PresenceFlow.Services
 
         public async Task RefreshAsync()
         {
-            if (_httpContext.HttpContext == null)
+            var httpContext = _httpContext.HttpContext;
+
+            if (httpContext == null)
             {
                 // Kein aktiver HTTP-Kontext (z.B. Background-Thread)
+                return;
+            }
+
+            var cookieExists = httpContext.Request.Cookies.ContainsKey(CookieName);
+
+            if (!cookieExists)
+            {
                 return;
             }
 
@@ -120,23 +130,30 @@ namespace PresenceFlow.Services
             // Kein gültiges Cookie vorhanden -> nichts verlängern
             if (auth == null)
             {
+                await SignOutAsync();
                 return;
             }
 
             // Cookie neu setzen (gleiches Payload, neues Ablaufdatum)
-            var cookieValue = System.Text.Json.JsonSerializer.Serialize(auth);
+            var cookieValue = JsonSerializer.Serialize(auth);
 
-            _httpContext.HttpContext.Response.Cookies.Append(
+            httpContext.Response.Cookies.Append(
                 CookieName,
                 cookieValue,
-                new CookieOptions
-                {
-                    HttpOnly = true,
-                    Secure = true,
-                    SameSite = SameSiteMode.Strict,
-                    Expires = DateTimeOffset.Now.AddDays(30)
-                }
-            );
+                CreateCookieOptions(
+                    SameSiteMode.Lax));
+        }
+
+        private static CookieOptions CreateCookieOptions(
+            SameSiteMode sameSite)
+        {
+            return new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = sameSite,
+                Expires = DateTimeOffset.UtcNow.AddDays(30)
+            };
         }
     }
 }
