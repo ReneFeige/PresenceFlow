@@ -35,24 +35,39 @@
             }
         </button>
 
-        @if (Message != null)
+        @if (Message != null && LoginLink == null)
         {
-            <p class="message">
+            <div class="@MessageCssClass"
+                 role="alert">
                 @Message
-            </p>
+            </div>
         }
 
         @if (LoginLink != null)
         {
             <div class="magic-link-container">
-                <p>
-                    Der lokale Anmeldelink wurde erstellt:
-                </p>
+
+                <div class="alert alert-warning" role="alert">
+                    <strong>Nur für lokale Entwicklung</strong>
+
+                    <p class="mb-2">
+                        Der Anmeldelink wird direkt in dieser Oberfläche
+                        angezeigt und nicht per E-Mail versendet.
+                    </p>
+
+                    <p class="mb-0">
+                        Für eine sichere Anmeldung im Produktivbetrieb muss
+                        ein E-Mail-Service konfiguriert und der
+                        Magic-Link-Provider auf
+                        <code>Email</code> gesetzt werden.
+                    </p>
+                </div>
 
                 <a href="@LoginLink"
                    class="login-link">
                     Jetzt anmelden
                 </a>
+
             </div>
         }
 

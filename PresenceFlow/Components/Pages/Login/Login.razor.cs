@@ -12,12 +12,33 @@ public partial class Login
     private string? Message { get; set; }
     private string? LoginLink { get; set; }
     private bool IsBusy { get; set; }
+    private LoginMessageType MessageType { get; set; }
+
+    private string MessageCssClass =>
+        MessageType switch
+        {
+            LoginMessageType.Error => "alert alert-danger",
+            LoginMessageType.Success => "alert alert-success",
+            LoginMessageType.Warning => "alert alert-warning",
+            _ => "alert alert-secondary"
+        };
 
     private async Task SendLink()
     {
-        IsBusy = true;
         Message = null;
         LoginLink = null;
+        MessageType = LoginMessageType.None;
+
+        if (string.IsNullOrWhiteSpace(Email))
+        {
+            Message = "Bitte geben Sie eine E-Mail-Adresse ein.";
+
+            MessageType = LoginMessageType.Error;
+
+            return;
+        }
+
+        IsBusy = true;
 
         try
         {
@@ -26,7 +47,9 @@ public partial class Login
 
             if (!result.Success)
             {
-                Message = "Diese E-Mail-Adresse ist nicht autorisiert.";
+                Message = "Mit dieser E-Mail-Adresse ist keine Anmeldung möglich. Bitte prüfen Sie Ihre Eingabe.";
+
+                MessageType = LoginMessageType.Error;
 
                 return;
             }
@@ -35,11 +58,15 @@ public partial class Login
             {
                 LoginLink = result.LoginLink;
                 Message = "Der Anmeldelink wurde lokal erstellt.";
+
+                MessageType = LoginMessageType.Warning;
             }
             else
             {
-                Message = "Der Anmeldelink wurde gesendet. " +
-                          "Bitte überprüfen Sie Ihr E-Mail-Postfach.";
+                Message = "Der Anmeldelink wurde per E-Mail versendet. " +
+                          "Bitte prüfen Sie Ihr Postfach.";
+
+                MessageType = LoginMessageType.Success;
             }
 
         }
@@ -47,5 +74,13 @@ public partial class Login
         {
             IsBusy = false;
         }
+    }
+
+    private enum LoginMessageType
+    {
+        None,
+        Success,
+        Warning,
+        Error
     }
 }
