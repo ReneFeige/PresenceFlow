@@ -12,10 +12,10 @@ namespace PresenceFlow.Services
         // Konstruktor: ConnectionString und Absender der Konfiguration laden
         public AzureEmailService(IConfiguration config)
         {
-            var connectionString = config["Email:ConnectionString"]
+            var connectionString = config["AzureEmail:ConnectionString"]
                 ?? throw new InvalidOperationException("Email ConnectionString missing");
 
-            _sender = config["Email:SenderAddress"]
+            _sender = config["AzureEmail:SenderAddress"]
                 ?? throw new InvalidOperationException("Email SenderAddress missing");
 
             _emailClient = new EmailClient(connectionString);
