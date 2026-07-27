@@ -1,12 +1,14 @@
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using PresenceFlow.Auth;
 using PresenceFlow.Components;
 using PresenceFlow.Data;
 using PresenceFlow.DataAccessLayer;
 using PresenceFlow.Hubs;
-using PresenceFlow.Middleware;
 using PresenceFlow.Models;
 using PresenceFlow.Services;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +18,61 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
+
+// Authentifizierung aktivieren und Cookies als Standard-Methode setzen
+builder.Services
+    .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.Cookie.Name = "PresenceFlowAuth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+
+        options.ExpireTimeSpan = TimeSpan.FromDays(30);
+        options.SlidingExpiration = true;
+
+        // User umleiten
+        options.LoginPath = "/login";
+        options.AccessDeniedPath = "/login";
+
+        // Session im Hintergrund prüfen (bei jedem Seitenaufruf)
+        options.Events.OnValidatePrincipal = async context =>
+        {
+            // Daten (Claims) aus dem verschlüsselten Cookie auslesen
+            var email = context.Principal?.FindFirstValue(ClaimTypes.Email);
+
+            var authVersionValue = context.Principal?.FindFirstValue("auth_version");
+
+            // Falls Daten im Cookie manipuliert wurden oder fehlen: Sofort ausloggen
+            if (string.IsNullOrWhiteSpace(email) || !int.TryParse(authVersionValue, out var authVersion))
+            {
+                context.RejectPrincipal();
+
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+                return;
+            }
+
+            var repository = context.HttpContext.RequestServices.GetRequiredService<IPresenceRepository>();
+
+            var person = await repository.GetPersonAsync(email);
+
+            // Session-Sperre: Wenn User gelöscht oder AuthVersion in DB erhöht wurde (Logout auf anderem Gerät)
+            if (person == null || person.AuthVersion != authVersion)
+            {
+                context.RejectPrincipal();
+
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            }
+        };
+    });
+
+// Aktiviert das Berechtigungssystem ([Authorize] Attribute)
+builder.Services.AddAuthorization();
+
+// Stellt den Login-Status global allen Blazor-Komponenten bereit
+builder.Services.AddCascadingAuthenticationState();
 
 builder.Services.AddDbContext<PresenceDbContext>(options =>
 {
@@ -72,8 +129,8 @@ if (!app.Environment.IsDevelopment())
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
-// Middleware registrieren
-app.UseMiddleware<AuthCookieRefreshMiddleware>();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseAntiforgery();
 
@@ -97,9 +154,9 @@ app.MapGet(
             return Results.Redirect("/login");
         }
 
-        var cookieCreated = await authCookieService.SignInAsync(email);
+        var signedIn = await authCookieService.SignInAsync(email);
 
-        if (!cookieCreated)
+        if (!signedIn)
         {
             return Results.Redirect("/login");
         }
