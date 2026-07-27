@@ -1,0 +1,157 @@
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.SignalR.Client;
+using PresenceFlow.Models;
+using PresenceFlow.Services;
+
+namespace PresenceFlow.Components.Pages;
+
+public partial class Home : IAsyncDisposable
+{
+    [Inject]
+    private IPresenceService PresenceService { get; set; } = default!;
+
+    [Inject]
+    private IAuthCookieService AuthCookieService { get; set; } = default!;
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+
+    // SignalR-Verbindung
+    private HubConnection? _hubConnection;
+
+    private int PresentCount { get; set; }
+    private Person? Person { get; set; }
+    private bool IsLoading { get; set; } = true;
+    private bool IsStorageAvailable { get; set; } = true;
+    private bool Success { get; set; } = true;
+
+    private string ButtonCssClass =>
+        Person?.Status == PresenceStatus.Absent
+            ? "btn-success"
+            : "btn-danger";
+
+    private string ButtonText =>
+        Person?.Status == PresenceStatus.Present
+            ? "Abmelden"
+            : "Anmelden";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckStorageAvailabilityAsync();
+
+        if (!IsStorageAvailable)
+        {
+            IsLoading = false;
+            return;
+        }
+
+        // Authentifizierungscookie prüfen
+        var auth = await AuthCookieService.GetAuthCookieAsync();
+
+        if (auth != null)
+        {
+            Person = await PresenceService.GetPersonAsync(auth.Email);
+        }
+
+        PresentCount = await PresenceService.GetPresentCountAsync();
+
+        await InitializeHubConnectionAsync();
+
+        IsLoading = false;
+    }
+
+    // SignalR-Verbindung aufbauen
+    private async Task InitializeHubConnectionAsync()
+    {
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/presenceHub"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        // Listener für Updates von anderen Clients registrieren
+        _hubConnection.On<IReadOnlyList<Person>>("ReceiveUpdate", people =>
+            {
+                PresentCount = people.Count(p => p.Status == PresenceStatus.Present);
+
+                if (Person != null)
+                {
+                    var currentEmail = Person.Email;
+
+                    Person = people.SingleOrDefault(p => p.Email.Equals(currentEmail, StringComparison.OrdinalIgnoreCase));
+                }
+
+                // UI aktualisieren
+                return InvokeAsync(StateHasChanged);
+            });
+
+        // SignalR-Verbindung starten
+        await _hubConnection.StartAsync();
+    }
+
+    private async Task LoginLogout()
+    {
+        if (Person == null)
+        {
+            return;
+        }
+
+        Success = Person.Status == PresenceStatus.Absent
+                ? await PresenceService.LoginAsync(Person.Email)
+                : await PresenceService.LogoutAsync(Person.Email);
+
+        if (!Success)
+        {
+            return;
+        }
+
+        // Status erneut vom Service laden, damit die UI sofort den aktuellen Status anzeigt
+        Person = await PresenceService.GetPersonAsync(Person.Email);
+    }
+
+    private async Task LogoutFromApp()
+    {
+        if (Person != null)
+        {
+            // authVersion erhöhen -> alle bestehenden Cookies werden ungültig
+            await PresenceService.UpdatePersonAuthVersionAsync(Person.Email, Person.AuthVersion + 1);
+        }
+
+        await DisposeHubConnectionAsync();
+
+        // Vollständiger Reload -> Cookie wird neu geprüft
+        NavigationManager.NavigateTo("/auth/logout", forceLoad: true);
+    }
+
+    private async Task CheckStorageAvailabilityAsync()
+    {
+        try
+        {
+            await PresenceService.GetPeopleAsync();
+
+            IsStorageAvailable = true;
+        }
+        catch
+        {
+            IsStorageAvailable = false;
+        }
+    }
+
+    private async Task DisposeHubConnectionAsync()
+    {
+        if (_hubConnection == null)
+        {
+            return;
+        }
+
+        // SignalR-Verbindung schließen
+        await _hubConnection.DisposeAsync();
+
+        _hubConnection = null;
+    }
+
+    // Dispose-Methode für asynchrone Bereinigung
+    public async ValueTask DisposeAsync()
+    {
+        await DisposeHubConnectionAsync();
+    }
+}

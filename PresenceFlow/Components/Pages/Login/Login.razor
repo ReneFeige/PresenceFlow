@@ -1,6 +1,4 @@
 ﻿@page "/login"
-@using PresenceFlow.Services
-@inject IMagicLinkAuthService MagicLinkAuthService
 
 <PageTitle>Anmeldung</PageTitle>
 
@@ -21,13 +19,13 @@
         <input class="email-input"
                type="email"
                placeholder="E-Mail-Adresse"
-               @bind="email"
-               disabled="@isBusy" />
+               @bind="Email"
+               disabled="@IsBusy" />
 
         <button class="login-button"
                 @onclick="SendLink"
-                disabled="@isBusy">
-            @if (isBusy)
+                disabled="@IsBusy">
+            @if (IsBusy)
             {
                 <span>Wird gesendet…</span>
             }
@@ -37,34 +35,42 @@
             }
         </button>
 
-        @if (message != null)
+        @if (Message != null && LoginLink == null)
         {
-            <p class="message">
-                @message
-            </p>
+            <div class="@MessageCssClass"
+                 role="alert">
+                @Message
+            </div>
+        }
+
+        @if (LoginLink != null)
+        {
+            <div class="magic-link-container">
+
+                <div class="alert alert-warning" role="alert">
+                    <strong>Nur für lokale Entwicklung</strong>
+
+                    <p class="mb-2">
+                        Der Anmeldelink wird direkt in dieser Oberfläche
+                        angezeigt und nicht per E-Mail versendet.
+                    </p>
+
+                    <p class="mb-0">
+                        Für eine sichere Anmeldung im Produktivbetrieb muss
+                        ein E-Mail-Service konfiguriert und der
+                        Magic-Link-Provider auf
+                        <code>Email</code> gesetzt werden.
+                    </p>
+                </div>
+
+                <a href="@LoginLink"
+                   class="login-link">
+                    Jetzt anmelden
+                </a>
+
+            </div>
         }
 
     </div>
 
 </div>
-
-@code {
-    private string email = "";
-    private string? message;
-    private bool isBusy;
-
-    private async Task SendLink()
-    {
-        isBusy = true;
-        message = null;
-
-        // Magic-Link senden
-        var success = await MagicLinkAuthService.SendLoginLinkAsync(email);
-
-        message = success
-            ? "Der Anmeldelink wurde gesendet. Bitte überprüfen Sie Ihr E-Mail-Postfach."
-            : "Diese E-Mail-Adresse ist nicht autorisiert.";
-
-        isBusy = false;
-    }
-}

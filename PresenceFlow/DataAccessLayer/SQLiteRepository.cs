@@ -23,8 +23,10 @@ namespace PresenceFlow.DataAccessLayer
 
         public async Task<Person?> GetPersonAsync(string email)
         {
+            var normalizedEmail = email.Trim().ToLowerInvariant();
+
             return await _context.People
-                .SingleOrDefaultAsync(p => p.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+                .SingleOrDefaultAsync(p => p.Email == normalizedEmail);
         }
 
         public async Task<bool> SetPresenceAsync(string email, PresenceStatus status)
@@ -50,12 +52,22 @@ namespace PresenceFlow.DataAccessLayer
 
         public async Task<bool> UpdateAuthVersionAsync(string email, int authVersion)
         {
-            var person = await _context.People.SingleOrDefaultAsync(p => p.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
-
-            if (person != null)
+            if (string.IsNullOrWhiteSpace(email))
             {
-                person.AuthVersion = authVersion;
+                return false;
             }
+
+            var normalizedEmail = email.Trim().ToLowerInvariant();
+
+            var person = await _context.People
+                .SingleOrDefaultAsync(p => p.Email == normalizedEmail);
+
+            if (person == null)
+            {
+                return false;
+            }
+
+            person.AuthVersion = authVersion;
 
             await _context.SaveChangesAsync();
 

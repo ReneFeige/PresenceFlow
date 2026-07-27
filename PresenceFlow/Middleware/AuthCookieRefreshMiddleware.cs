@@ -31,12 +31,8 @@ namespace PresenceFlow.Middleware
             HttpContext context,
             IAuthCookieService authCookieService)
         {
-            // Prüfen, ob das Auth-Cookie existiert
-            if (context.Request.Cookies.ContainsKey("PresenceFlowAuth"))
-            {
-                // Cookie nur verlängern, wenn es gültig ist
-                await authCookieService.RefreshAsync();
-            }
+            // Cookie nur verlängern, wenn es gültig ist
+            await authCookieService.RefreshAsync();
 
             // Request an die nächste Middleware oder Komponente weitergeben
             await _next(context);

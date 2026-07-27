@@ -2,7 +2,7 @@
 {
     public interface IMagicLinkAuthService
     {
-        Task<bool> SendLoginLinkAsync(string email);
+        Task<MagicLinkSendResult> SendLoginLinkAsync(string email);
         bool ConsumeToken(string token, out string email);
     }
 }
