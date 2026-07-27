@@ -1,6 +1,8 @@
-﻿using System.Text.Json;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using PresenceFlow.Auth;
 using PresenceFlow.DataAccessLayer;
+using System.Security.Claims;
 
 namespace PresenceFlow.Services
 {
@@ -8,152 +10,115 @@ namespace PresenceFlow.Services
     {
         // IHttpContextAccessor ermöglicht den Zugriff auf den aktuellen HttpContext außerhalb von Controllern oder Middleware.
         // Wird hier benötigt, um Cookies zu setzen, zu lesen oder zu löschen (für Auth-Cookies).
-        private readonly IHttpContextAccessor _httpContext;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IPresenceRepository _repository;
-        private const string CookieName = "PresenceFlowAuth";
 
-        public AuthCookieService(IHttpContextAccessor httpContext, IPresenceRepository repository)
+        private const string AuthVersionClaimType = "auth_version";
+
+        public AuthCookieService(IHttpContextAccessor httpContextAccessor, IPresenceRepository repository)
         {
-            _httpContext = httpContext;
+            _httpContextAccessor = httpContextAccessor;
             _repository = repository;
         }
 
         public async Task<bool> SignInAsync(string email)
         {
-            // Person laden, um die aktuelle AuthVersion zu bekommen
-            var person = await _repository.GetPersonAsync(email);
-            var httpContext = _httpContext.HttpContext;
+            var httpContext = _httpContextAccessor.HttpContext;
 
-            if (person == null || httpContext == null)
+            if (httpContext == null)
             {
                 return false;
             }
 
-            var cookie = new AuthCookie
+            // Person laden, um die aktuelle AuthVersion zu bekommen
+            var person = await _repository.GetPersonAsync(email);
+
+            if (person == null)
             {
-                Email = person.Email,
-                AuthVersion = person.AuthVersion
+                return false;
+            }
+
+            // Claims für die Authentifizierung erstellen.
+            var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, person.Id.ToString()),
+            new(ClaimTypes.Name, $"{person.FirstName} {person.LastName}"),
+            new(ClaimTypes.Email, person.Email),
+            new(AuthVersionClaimType, person.AuthVersion.ToString())
+        };
+
+            // Administratorrolle hinzufügen.
+            if (person.IsAdmin)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+            }
+
+            // Claims in einer Identität zusammenfassen.
+            var identity = new ClaimsIdentity(
+                claims,
+                CookieAuthenticationDefaults.AuthenticationScheme);
+
+            var principal = new ClaimsPrincipal(identity);
+
+            var properties = new AuthenticationProperties
+            {
+                IsPersistent = true,
+                AllowRefresh = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30)
             };
 
-            var cookieValue = JsonSerializer.Serialize(cookie);
-
-            httpContext.Response.Cookies.Append(
-                CookieName,
-                cookieValue,
-                CreateCookieOptions(
-                    SameSiteMode.Lax));
+            await httpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                principal,
+                properties);
 
             return true;
         }
 
         public async Task<AuthCookie?> GetAuthCookieAsync()
         {
-            var cookieValue = _httpContext.HttpContext?.Request.Cookies[CookieName];
+            var httpContext = _httpContextAccessor.HttpContext;
+            var principal = httpContext?.User;
 
-            if (string.IsNullOrWhiteSpace(cookieValue))
+            // Nur authentifizierte Benutzer zulassen.
+            if (principal?.Identity?.IsAuthenticated != true)
             {
                 return null;
             }
 
-            try
+            var email = principal.FindFirstValue(ClaimTypes.Email);
+            var authVersionValue = principal.FindFirstValue(AuthVersionClaimType);
+
+            if (string.IsNullOrWhiteSpace(email) || !int.TryParse(authVersionValue, out var authVersion))
             {
-                var cookie = JsonSerializer.Deserialize<AuthCookie>(cookieValue);
-
-                if (cookie == null || string.IsNullOrWhiteSpace(cookie.Email))
-                {
-                    return null;
-                }
-
-                // Aktuelle Person aus Datenbank holen
-                var person = await _repository.GetPersonAsync(cookie.Email);
-
-                if (person == null)
-                {
-                    return null;
-                }
-
-                // AuthVersion prüfen
-                if (cookie.AuthVersion != person.AuthVersion)
-                {
-                    return null;
-                }
-
-                // Alles gut -> Cookie zurückgeben
-                return cookie;
-            }
-            catch (JsonException)
-            {
-                // Ungültiges Cookie-Format -> ignorieren
                 return null;
             }
-        }
 
-        public Task SignOutAsync()
-        {
-            var httpContext = _httpContext.HttpContext;
+            var person = await _repository.GetPersonAsync(email);
 
-            if (httpContext != null)
+            if (person == null || person.AuthVersion != authVersion)
             {
-                // Auth-Cookie löschen -> Benutzer ist abgemeldet
-                httpContext.Response.Cookies.Delete(
-                    CookieName,
-                    CreateCookieOptions(
-                        SameSiteMode.Lax));
+                return null;
             }
-            // Aktuell keine asynchrone Methode
-            // Durch Task.CompletedTask ist die Methode awaitable
-            // Abgeschlossener Task wird zurückgegeben
-            return Task.CompletedTask;
+
+            // Gültige Authentifizierungsdaten zurückgeben.
+            return new AuthCookie
+            {
+                Email = person.Email,
+                AuthVersion = person.AuthVersion
+            };
         }
 
-        public async Task RefreshAsync()
+        public async Task SignOutAsync()
         {
-            var httpContext = _httpContext.HttpContext;
+            var httpContext = _httpContextAccessor.HttpContext;
 
             if (httpContext == null)
             {
-                // Kein aktiver HTTP-Kontext (z.B. Background-Thread)
                 return;
             }
 
-            var cookieExists = httpContext.Request.Cookies.ContainsKey(CookieName);
-
-            if (!cookieExists)
-            {
-                return;
-            }
-
-            // Bestehendes Auth-Cookie lesen und vollständig validieren
-            // (Existenz, Person vorhanden, AuthVersion aktuell)
-            var auth = await GetAuthCookieAsync();
-
-            // Kein gültiges Cookie vorhanden -> nichts verlängern
-            if (auth == null)
-            {
-                await SignOutAsync();
-                return;
-            }
-
-            // Cookie neu setzen (gleiches Payload, neues Ablaufdatum)
-            var cookieValue = JsonSerializer.Serialize(auth);
-
-            httpContext.Response.Cookies.Append(
-                CookieName,
-                cookieValue,
-                CreateCookieOptions(
-                    SameSiteMode.Lax));
-        }
-
-        private static CookieOptions CreateCookieOptions(
-            SameSiteMode sameSite)
-        {
-            return new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = sameSite,
-                Expires = DateTimeOffset.UtcNow.AddDays(30)
-            };
+            await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         }
     }
 }
