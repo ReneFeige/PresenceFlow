@@ -22,7 +22,9 @@ namespace PresenceFlow.Data
             using var scope = app.Services.CreateScope();
 
             // Datenbankkontext auflösen
-            var dbContext = scope.ServiceProvider.GetRequiredService<PresenceDbContext>();
+            var contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<PresenceDbContext>>();
+
+            await using var dbContext = await contextFactory.CreateDbContextAsync();
 
             // Ausstehende EF-Migrationen anwenden (erstellt auch die DB)
             await dbContext.Database.MigrateAsync();
