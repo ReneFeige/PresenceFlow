@@ -165,7 +165,7 @@ app.MapGet(
 
         if (person?.Status == PresenceStatus.Absent)
         {
-            await presenceService.LoginAsync(person.Email);
+            await presenceService.SetPresenceForTrustedEmailAsync(email, PresenceStatus.Present);
         }
 
         return Results.Redirect("/");

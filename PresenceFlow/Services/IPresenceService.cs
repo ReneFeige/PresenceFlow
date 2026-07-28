@@ -1,4 +1,5 @@
 ﻿using PresenceFlow.Models;
+using System.Security.Claims;
 
 namespace PresenceFlow.Services
 {
@@ -8,8 +9,9 @@ namespace PresenceFlow.Services
         Task<IReadOnlyList<Person>> GetPeopleAsync();
         Task<IReadOnlyList<Person>> GetPresentPeopleAsync();
         Task<int> GetPresentCountAsync();
-        Task<bool> LoginAsync(string email);
-        Task<bool> LogoutAsync(string email);
+
+        Task<bool> SetPresenceForCurrentUserAsync(ClaimsPrincipal user, PresenceStatus status);
+        Task<bool> SetPresenceForTrustedEmailAsync(string email, PresenceStatus status);
         Task<bool> UpdatePersonAuthVersionAsync(string email, int authVersion);
     }
 }
