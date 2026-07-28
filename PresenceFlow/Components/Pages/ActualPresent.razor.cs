@@ -23,10 +23,8 @@ public partial class ActualPresent : IAsyncDisposable
     protected override async Task OnInitializedAsync()
     {
         // Initiale Daten vom Service laden (HTTP Request)
-        var people = await PresenceService.GetPeopleAsync();
+        PresentPeople = await PresenceService.GetPresentPeopleAsync();
 
-        // Daten anwenden (Filtern & Sortieren)
-        ApplyData(people);
         IsLoading = false;
 
         await InitializeHubConnectionAsync();
@@ -41,27 +39,16 @@ public partial class ActualPresent : IAsyncDisposable
             .Build();
 
         // Listener für Updates von anderen Clients registrieren
-        _hubConnection.On<IReadOnlyList<Person>>("ReceiveUpdate", people =>
+        _hubConnection.On<PresenceUpdateDto>("ReceiveUpdate", async update =>
             {
-                ApplyData(people);
+                PresentPeople = await PresenceService.GetPresentPeopleAsync();
 
                 // UI aktualisieren
-                return InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged);
             });
 
         // SignalR-Verbindung starten
         await _hubConnection.StartAsync();
-    }
-
-    // Wendet die Daten auf lokale Properties an
-    private void ApplyData(IReadOnlyList<Person> people)
-    {
-        PresentPeople = people
-            .Where(p => p.Status == PresenceStatus.Present)
-            .OrderBy(p => p.Timestamp ?? DateTime.MaxValue)
-            .ThenBy(p => p.LastName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(p => p.FirstName, StringComparer.OrdinalIgnoreCase)
-            .ToList();
     }
 
     private static string GetDisplayName(Person person)
@@ -70,7 +57,7 @@ public partial class ActualPresent : IAsyncDisposable
 
         // Email-Adresse anzeigen, sollte der Name fehlen
         return string.IsNullOrWhiteSpace(fullName)
-            ? person.Email
+            ? "Unbekannte Person"
             : fullName;
     }
 

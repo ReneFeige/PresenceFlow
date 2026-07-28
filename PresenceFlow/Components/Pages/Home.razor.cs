@@ -76,19 +76,17 @@ public partial class Home : IAsyncDisposable
             .Build();
 
         // Listener für Updates von anderen Clients registrieren
-        _hubConnection.On<IReadOnlyList<Person>>("ReceiveUpdate", people =>
+        _hubConnection.On<PresenceUpdateDto>("ReceiveUpdate", async update =>
             {
-                PresentCount = people.Count(p => p.Status == PresenceStatus.Present);
+                PresentCount = update.PresentCount;
 
                 if (Person != null)
                 {
-                    var currentEmail = Person.Email;
-
-                    Person = people.SingleOrDefault(p => p.Email.Equals(currentEmail, StringComparison.OrdinalIgnoreCase));
+                    Person = await PresenceService.GetPersonAsync(Person.Email);
                 }
 
                 // UI aktualisieren
-                return InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged);
             });
 
         // SignalR-Verbindung starten
