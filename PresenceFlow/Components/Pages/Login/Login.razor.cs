@@ -45,29 +45,32 @@ public partial class Login
             // Magic-Link senden
             var result = await MagicLinkAuthService.SendLoginLinkAsync(Email);
 
-            if (!result.Success)
+            if (result.IsUiDemo)
             {
-                Message = "Mit dieser E-Mail-Adresse ist keine Anmeldung möglich. Bitte prüfen Sie Ihre Eingabe.";
+                if (!result.Success || result.LoginLink == null)
+                {
+                    Message =
+                        "Mit dieser E-Mail-Adresse ist keine Demo-Anmeldung möglich. " +
+                        "Bitte verwenden Sie eine hinterlegte Beispieladresse.";
 
-                MessageType = LoginMessageType.Error;
+                    MessageType = LoginMessageType.Error;
 
-                return;
-            }
+                    return;
+                }
 
-            if (result.LoginLink != null)
-            {
                 LoginLink = result.LoginLink;
                 Message = "Der Anmeldelink wurde lokal erstellt.";
 
                 MessageType = LoginMessageType.Warning;
-            }
-            else
-            {
-                Message = "Der Anmeldelink wurde per E-Mail versendet. " +
-                          "Bitte prüfen Sie Ihr Postfach.";
 
-                MessageType = LoginMessageType.Success;
+                return;
             }
+
+            Message =
+                "Falls diese E-Mail-Adresse hinterlegt ist, " +
+                "wurde ein Anmeldelink versendet.";
+
+            MessageType = LoginMessageType.Success;
 
         }
         finally
