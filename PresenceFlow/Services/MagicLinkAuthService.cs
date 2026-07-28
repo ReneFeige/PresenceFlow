@@ -27,14 +27,41 @@ namespace PresenceFlow.Services
         // Sendet einen einmaligen Login-Link an die angegebene E-Mail
         public async Task<MagicLinkSendResult> SendLoginLinkAsync(string email)
         {
+            var normalizedEmail = email.Trim().ToLowerInvariant();
+
+            var isUiProvider = _magicLinkProvider.Equals("UI", StringComparison.OrdinalIgnoreCase);
+
+            var isEmailProvider = _magicLinkProvider.Equals("Email", StringComparison.OrdinalIgnoreCase);
+
+            if (!isUiProvider && !isEmailProvider)
+            {
+                throw new InvalidOperationException(
+                    $"Unbekannter Magic-Link-Provider: '{_magicLinkProvider}'. " +
+                    "Erlaubte Werte sind 'UI' und 'Email'.");
+            }
+
             // Prüfen, ob die Person existiert
             var person = await _repository.GetPersonAsync(email);
 
             if (person == null)
             {
+                // Der lokale UI-Demomodus darf mitteilen, dass kein Demo-Benutzer
+                // für die eingegebene Adresse vorhanden ist.
+                if (isUiProvider)
+                {
+                    return new MagicLinkSendResult
+                    {
+                        Success = false,
+                        IsUiDemo = true
+                    };
+                }
+
+                // Im normalen E-Mail-Modus immer ein neutrales Ergebnis liefern.
+                // Dadurch ist von außen nicht erkennbar, ob die Adresse existiert.
                 return new MagicLinkSendResult
                 {
-                    Success = false
+                    Success = true,
+                    IsUiDemo = false
                 };
             }
 
@@ -50,48 +77,44 @@ namespace PresenceFlow.Services
             // Login-Link zusammenstellen
             var relativeLink = $"/auth/magic?token={token}";
 
-            if (_magicLinkProvider.Equals("UI", StringComparison.OrdinalIgnoreCase))
+            if (isUiProvider)
             {
                 return new MagicLinkSendResult
                 {
                     Success = true,
+                    IsUiDemo = true,
                     LoginLink = relativeLink
                 };
             }
 
-            if (_magicLinkProvider.Equals("Email", StringComparison.OrdinalIgnoreCase))
+            var absoluteLink = $"{_baseUrl.TrimEnd('/')}{relativeLink}";
+
+            var textBody = CreateTextBody(
+                absoluteLink,
+                lifetimeMinutes);
+
+            var htmlBody = CreateHtmlBody(
+                person.FirstName,
+                absoluteLink,
+                lifetimeMinutes);
+
+            // E-Mail-Service nur bei Bedarf aus dem DI-Container laden
+            using var scope = _serviceProvider.CreateScope();
+
+            var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+
+            await emailService.SendAsync(
+                person.Email,
+                "Dein Login-Link",
+                textBody,
+                htmlBody
+            );
+
+            return new MagicLinkSendResult
             {
-                var absoluteLink = $"{_baseUrl.TrimEnd('/')}{relativeLink}";
-
-                var textBody = CreateTextBody(
-                    absoluteLink,
-                    lifetimeMinutes);
-
-                var htmlBody = CreateHtmlBody(
-                    person.FirstName,
-                    absoluteLink,
-                    lifetimeMinutes);
-
-                // E-Mail-Service nur bei Bedarf aus dem DI-Container laden
-                var emailService = _serviceProvider.GetRequiredService<IEmailService>();
-
-                await emailService.SendAsync(
-                    person.Email,
-                    "Dein Login-Link",
-                    textBody,
-                    htmlBody
-                );
-
-                return new MagicLinkSendResult
-                {
-                    Success = true
-                };
-            }
-
-            throw new InvalidOperationException(
-                    $"Unbekannter Magic-Link-Provider: " +
-                    $"'{_magicLinkProvider}'. " +
-                    "Erlaubte Werte sind 'UI' und 'Email'.");
+                Success = true,
+                IsUiDemo = false
+            };
         }
 
         // Prüft und konsumiert (entfernt) einen Token, gibt die zugehörige E-Mail zurück
