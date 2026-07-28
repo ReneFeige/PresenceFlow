@@ -3,6 +3,7 @@ using PresenceFlow.DataAccessLayer;
 using PresenceFlow.Hubs;
 using PresenceFlow.Models;
 using PresenceFlow.Services;
+using System.Security.Claims;
 
 public class PresenceService : IPresenceService
 {
@@ -22,32 +23,46 @@ public class PresenceService : IPresenceService
         return _repository.GetPersonAsync(email);
     }
 
-    // Meldet die Person "anwesend"
-    public async Task<bool> LoginAsync(string email)
+    // Setzt den Status des aktuell angemeldeten Benutzers
+    public async Task<bool> SetPresenceForCurrentUserAsync(ClaimsPrincipal user, PresenceStatus status)
     {
-        var success = await _repository.SetPresenceAsync(email, PresenceStatus.Present);
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            return false;
+        }
 
-        // Wenn erfolgreich, alle Clients über SignalR benachrichtigen
+        var email = user.FindFirstValue(ClaimTypes.Email);
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return false;
+        }
+
+        return await SetPresenceAsync(email, status);
+    }
+
+    // Setzt den Status anhand einer bereits vertrauenswürdigen E-Mail
+    public Task<bool> SetPresenceForTrustedEmailAsync(string email, PresenceStatus status)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return Task.FromResult(false);
+        }
+
+        return SetPresenceAsync(email, status);
+    }
+
+    // Aktualisiert den Status
+    private async Task<bool> SetPresenceAsync(string email, PresenceStatus status)
+    {
+        var success = await _repository.SetPresenceAsync(email, status);
+
         if (success)
         {
             await NotifyClientsAsync();
         }
 
-            return success;
-    }
-
-    // Meldet die Person "abwesend"
-    public async Task<bool> LogoutAsync(string email)
-    {
-        var success = await _repository.SetPresenceAsync(email, PresenceStatus.Absent);
-
-        // Wenn erfolgreich, alle Clients über SignalR benachrichtigen
-        if (success) 
-        {
-            await NotifyClientsAsync();
-        }
-
-            return success;
+        return success;
     }
 
     // Gibt alle Personen und deren Status zurück

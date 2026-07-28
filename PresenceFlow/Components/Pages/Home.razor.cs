@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 using PresenceFlow.Models;
 using PresenceFlow.Services;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace PresenceFlow.Components.Pages;
 
@@ -11,10 +13,10 @@ public partial class Home : IAsyncDisposable
     private IPresenceService PresenceService { get; set; } = default!;
 
     [Inject]
-    private IAuthCookieService AuthCookieService { get; set; } = default!;
+    private NavigationManager NavigationManager { get; set; } = default!;
 
     [Inject]
-    private NavigationManager NavigationManager { get; set; } = default!;
+    private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
 
     // SignalR-Verbindung
     private HubConnection? _hubConnection;
@@ -24,6 +26,7 @@ public partial class Home : IAsyncDisposable
     private bool IsLoading { get; set; } = true;
     private bool IsStorageAvailable { get; set; } = true;
     private bool Success { get; set; } = true;
+    private ClaimsPrincipal CurrentUser { get; set; } = new(new ClaimsIdentity());
 
     private string ButtonCssClass =>
         Person?.Status == PresenceStatus.Absent
@@ -46,11 +49,15 @@ public partial class Home : IAsyncDisposable
         }
 
         // Authentifizierungscookie prüfen
-        var auth = await AuthCookieService.GetAuthCookieAsync();
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
-        if (auth != null)
+        CurrentUser = authenticationState.User;
+
+        var email = CurrentUser.FindFirstValue(ClaimTypes.Email);
+
+        if (!string.IsNullOrWhiteSpace(email))
         {
-            Person = await PresenceService.GetPersonAsync(auth.Email);
+            Person = await PresenceService.GetPersonAsync(email);
         }
 
         PresentCount = await PresenceService.GetPresentCountAsync();
@@ -90,30 +97,47 @@ public partial class Home : IAsyncDisposable
 
     private async Task LoginLogout()
     {
-        if (Person == null)
+        if (Person == null || CurrentUser.Identity?.IsAuthenticated != true)
         {
+            Success = false;
             return;
         }
 
-        Success = Person.Status == PresenceStatus.Absent
-                ? await PresenceService.LoginAsync(Person.Email)
-                : await PresenceService.LogoutAsync(Person.Email);
+        var newStatus =
+            Person.Status == PresenceStatus.Absent
+                ? PresenceStatus.Present
+                : PresenceStatus.Absent;
+
+        Success = await PresenceService.SetPresenceForCurrentUserAsync(CurrentUser, newStatus);
 
         if (!Success)
         {
             return;
         }
 
-        // Status erneut vom Service laden, damit die UI sofort den aktuellen Status anzeigt
-        Person = await PresenceService.GetPersonAsync(Person.Email);
+        // E-Mail des aktuellen Benutzers aus den Claims auslesen
+        var email = CurrentUser.FindFirstValue(ClaimTypes.Email);
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            // Status erneut vom Service laden, damit die UI sofort den aktuellen Status anzeigt
+            Person = await PresenceService.GetPersonAsync(email);
+        }
     }
 
     private async Task LogoutFromApp()
     {
-        if (Person != null)
+        var email = CurrentUser.FindFirstValue(ClaimTypes.Email);
+
+        if (!string.IsNullOrWhiteSpace(email))
         {
-            // authVersion erhöhen -> alle bestehenden Cookies werden ungültig
-            await PresenceService.UpdatePersonAuthVersionAsync(Person.Email, Person.AuthVersion + 1);
+            var currentPerson = await PresenceService.GetPersonAsync(email);
+
+            if (currentPerson != null)
+            {
+                // authVersion erhöhen -> alle bestehenden Cookies werden ungültig
+                await PresenceService.UpdatePersonAuthVersionAsync(email, currentPerson.AuthVersion + 1);
+            }
         }
 
         await DisposeHubConnectionAsync();
