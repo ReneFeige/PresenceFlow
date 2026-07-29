@@ -18,7 +18,7 @@ namespace PresenceFlow.Data
             {
                 FirstName = "Anna",
                 LastName = "Schmidt",
-                Email = "schmidt@flow.de",
+                Email = "anna.schmidt@example.com",
                 Status = PresenceStatus.Present,
                 Timestamp = DateTime.Now,
                 IsAdmin = true,
@@ -28,8 +28,8 @@ namespace PresenceFlow.Data
             {
                 FirstName = "David",
                 LastName = "Weber",
-                Email = "weber@flow.de",
-                Status = PresenceStatus.Absent,
+                Email = "david.weber@example.com",
+                Status = PresenceStatus.Present,
                 Timestamp = DateTime.Now,
                 IsAdmin = true,
                 AuthVersion = 1
@@ -38,8 +38,8 @@ namespace PresenceFlow.Data
             {
                 FirstName = "Sofia",
                 LastName = "Keller",
-                Email = "keller@flow.de",
-                Status = PresenceStatus.Present,
+                Email = "sofia.keller@example.com",
+                Status = PresenceStatus.Absent,
                 Timestamp = DateTime.Now,
                 IsAdmin = false,
                 AuthVersion = 1
@@ -48,7 +48,7 @@ namespace PresenceFlow.Data
             {
                 FirstName = "Lukas",
                 LastName = "Fischer",
-                Email = "fischer@flow.de",
+                Email = "lukas.fischer@example.com",
                 Status = PresenceStatus.Present,
                 Timestamp = DateTime.Now,
                 IsAdmin = false,
@@ -58,12 +58,12 @@ namespace PresenceFlow.Data
             {
                 FirstName = "Marie",
                 LastName = "Hoffmann",
-                Email = "hoffmann@flow.de",
+                Email = "marie.hoffmann@example.com",
                 Status = PresenceStatus.Present,
                 Timestamp = DateTime.Now,
                 IsAdmin = false,
                 AuthVersion = 1
-            },
+            }
         };
 
             context.People.AddRange(people);

@@ -80,3 +80,34 @@
     text-align: center;
     color: #495057;
 }
+
+/* Portfolio-Demo */
+.demo-hint {
+    margin-bottom: 16px;
+    padding: 14px;
+    border: 1px solid #d6e4f0;
+    border-radius: 14px;
+    background-color: #f4f8fc;
+    color: #334155;
+}
+
+    .demo-hint p {
+        margin: 6px 0;
+        font-size: 0.9rem;
+    }
+
+.demo-email-button {
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #007bff;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+    .demo-email-button:disabled {
+        cursor: default;
+        opacity: 0.6;
+    }

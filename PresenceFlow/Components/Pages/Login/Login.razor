@@ -16,6 +16,23 @@
             Bitte geben Sie Ihre E-Mail-Adresse ein.
         </p>
 
+        @if (IsUiDemo)
+        {
+            <div class="demo-hint">
+                <strong>Portfolio-Demo</strong>
+
+                <p>Benutzer:</p>
+                <button class="demo-email-button" @onclick="() => UseDemoEmail(UserDemoEmail)">
+                    @UserDemoEmail
+                </button>
+
+                <p>Administrator:</p>
+                <button class="demo-email-button" @onclick="() => UseDemoEmail(AdminDemoEmail)">
+                    @AdminDemoEmail
+                </button>
+            </div>
+        }
+
         <input class="email-input"
                type="email"
                placeholder="E-Mail-Adresse"

@@ -104,6 +104,43 @@ else
         "Erlaubte Werte sind 'SQLite' und 'IoBroker'.");
 }
 
+var magicLinkProvider =
+    builder.Configuration["MagicLink:Provider"]
+    ?? throw new InvalidOperationException("MagicLink:Provider fehlt.");
+
+if (magicLinkProvider.Equals("Email", StringComparison.OrdinalIgnoreCase))
+{
+    var baseUrl = builder.Configuration["App:BaseUrl"];
+
+    if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var parsedBaseUrl)
+        || parsedBaseUrl.Scheme != Uri.UriSchemeHttps)
+    {
+        throw new InvalidOperationException(
+            "App:BaseUrl muss für den E-Mail-Modus " +
+            "eine absolute HTTPS-URL sein.");
+    }
+
+    var connectionString = builder.Configuration["AzureEmail:ConnectionString"];
+
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        throw new InvalidOperationException("AzureEmail:ConnectionString fehlt für den E-Mail-Modus.");
+    }
+
+    var senderAddress = builder.Configuration["AzureEmail:SenderAddress"];
+
+    if (string.IsNullOrWhiteSpace(senderAddress))
+    {
+        throw new InvalidOperationException("AzureEmail:SenderAddress fehlt für den E-Mail-Modus.");
+    }
+}
+else if (!magicLinkProvider.Equals("UI", StringComparison.OrdinalIgnoreCase))
+{
+    throw new InvalidOperationException(
+        $"Unbekannter Magic-Link-Provider: '{magicLinkProvider}'. " +
+        "Erlaubte Werte sind 'UI' und 'Email'.");
+}
+
 // Services injizieren
 builder.Services.AddScoped<IPresenceService, PresenceService>();
 builder.Services.AddScoped<IEmailService, AzureEmailService>();

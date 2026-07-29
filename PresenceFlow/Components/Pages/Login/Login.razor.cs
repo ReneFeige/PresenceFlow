@@ -8,11 +8,31 @@ public partial class Login
     [Inject]
     private IMagicLinkAuthService MagicLinkAuthService { get; set; } = default!;
 
+    [Inject]
+    private IConfiguration Configuration { get; set; } = default!;
+
+    [Inject]
+    private ILogger<Login> Logger { get; set; } = default!;
+
+    private const string UserDemoEmail = "sofia.keller@example.com";
+    private const string AdminDemoEmail = "anna.schmidt@example.com";
+
     private string Email { get; set; } = string.Empty;
     private string? Message { get; set; }
     private string? LoginLink { get; set; }
     private bool IsBusy { get; set; }
     private LoginMessageType MessageType { get; set; }
+
+    private bool IsUiDemo =>
+    string.Equals(Configuration["MagicLink:Provider"], "UI", StringComparison.OrdinalIgnoreCase);
+
+    private void UseDemoEmail(string email)
+    {
+        Email = email;
+        Message = null;
+        LoginLink = null;
+        MessageType = LoginMessageType.None;
+    }
 
     private string MessageCssClass =>
         MessageType switch
@@ -72,6 +92,19 @@ public partial class Login
 
             MessageType = LoginMessageType.Success;
 
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Beim Erstellen oder Versenden eines Magic Links ist ein Fehler aufgetreten.");
+
+            Message =
+                "Der Anmeldelink konnte derzeit nicht erstellt oder versendet werden. " +
+                "Bitte versuchen Sie es später erneut.";
+
+            LoginLink = null;
+            MessageType = LoginMessageType.Error;
         }
         finally
         {
