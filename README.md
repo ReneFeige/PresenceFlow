@@ -1,3 +1,9 @@
+<p align="center">
+    <img src="PresenceFlow/wwwroot/images/logo.png"
+         width="180"
+         alt="PresenceFlow Logo">
+</p>
+
 # PresenceFlow
 
 PresenceFlow ist eine webbasierte Anwesenheitsverwaltung, die mit ASP.NET Core und Blazor Server entwickelt wurde.
