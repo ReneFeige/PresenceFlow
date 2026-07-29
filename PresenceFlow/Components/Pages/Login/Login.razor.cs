@@ -11,6 +11,9 @@ public partial class Login
     [Inject]
     private IConfiguration Configuration { get; set; } = default!;
 
+    [Inject]
+    private ILogger<Login> Logger { get; set; } = default!;
+
     private const string UserDemoEmail = "sofia.keller@example.com";
     private const string AdminDemoEmail = "anna.schmidt@example.com";
 
@@ -89,6 +92,19 @@ public partial class Login
 
             MessageType = LoginMessageType.Success;
 
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Beim Erstellen oder Versenden eines Magic Links ist ein Fehler aufgetreten.");
+
+            Message =
+                "Der Anmeldelink konnte derzeit nicht erstellt oder versendet werden. " +
+                "Bitte versuchen Sie es später erneut.";
+
+            LoginLink = null;
+            MessageType = LoginMessageType.Error;
         }
         finally
         {
