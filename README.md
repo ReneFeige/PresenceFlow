@@ -14,13 +14,17 @@ Das Projekt entstand ursprünglich während eines Praktikums und wurde anschlie�
 
 ## Hintergrund
 
-PresenceFlow entstand ursprünglich im Rahmen eines Praktikums als Teil einer Lösung zur Anwesenheitserfassung in einem Unternehmen.
+PresenceFlow basiert auf einer Idee, die ursprünglich im Rahmen eines Praktikums zur Anwesenheitserfassung entwickelt wurde.
+Mitarbeitende konnten sich über einen QR-Code im Eingangsbereich bewusst an- oder abmelden. Die Anwendung verwaltete den Anwesenheitsstatus und
+stellte diesen über ioBroker als zentrale Datenquelle bereit. Andere Systeme, die beispielsweise für die Alarmanlage, Beleuchtung oder Heizung zuständig sind,
+konnten diese Informationen anschließend weiterverwenden.
 
-Mitarbeitende konnten sich über einen QR-Code im Eingangsbereich bewusst an- oder abmelden. Die Anwendung verwaltete den Anwesenheitsstatus und stellte diesen über ioBroker als zentrale Datenquelle bereit. Andere Systeme, die beispielsweise für die Alarmanlage, Beleuchtung oder Heizung zuständig sind, konnten diese Informationen anschließend weiterverwenden.
+Für dieses öffentliche Portfolio-Projekt wurde die Anwendung von Grund auf neu konzipiert und implementiert.
+Sie wurde so optimiert, dass sie vollständig unabhängig von externer Infrastruktur lauffähig und leicht nachvollziehbar ist.
+Dazu wurden unter anderem ein lokaler SQLite-Modus, ein UI-basierter Demo-Modus sowie eine klarere Projektstruktur und zusätzliche Sicherheitsmechanismen ergänzt.
 
-Für dieses öffentliche Portfolio-Projekt wurde die Anwendung so überarbeitet, dass sie ohne externe Infrastruktur lauffähig und leicht nachvollziehbar ist. Dazu wurden unter anderem ein lokaler SQLite-Modus, ein UI-basierter Demo-Modus sowie eine klarere Projektstruktur und zusätzliche Sicherheitsmechanismen ergänzt.
-
-Die Anwendung unterstützt einen lokalen Standalone-Betrieb mit SQLite sowie die Anbindung an ioBroker. Für eine einfache lokale Demonstration steht ein UI-basierter Magic-Link-Modus zur Verfügung, der keinen externen E-Mail-Dienst benötigt.
+Die Anwendung unterstützt einen lokalen Standalone-Betrieb mit SQLite sowie die Anbindung an ioBroker.
+Für eine einfache lokale Demonstration steht ein UI-basierter Magic-Link-Modus zur Verfügung, der keinen externen E-Mail-Dienst benötigt.
 
 ## Funktionen
 
