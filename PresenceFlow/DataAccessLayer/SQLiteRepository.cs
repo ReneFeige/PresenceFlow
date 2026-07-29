@@ -6,18 +6,21 @@ namespace PresenceFlow.DataAccessLayer
 {
     public class SQLiteRepository : IPresenceRepository
     {
-        private readonly PresenceDbContext _context;
+        private readonly IDbContextFactory<PresenceDbContext> _contextFactory;
 
-        public SQLiteRepository(PresenceDbContext context)
+        public SQLiteRepository(IDbContextFactory<PresenceDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
 
         public async Task<IReadOnlyList<Person>> GetPeopleAsync()
         {
-            return await _context.People
-                .OrderBy(x => x.LastName)
-                .ThenBy(x => x.FirstName)
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await context.People
+                .AsNoTracking()
+                .OrderBy(p => p.LastName)
+                .ThenBy(p => p.FirstName)
                 .ToListAsync();
         }
 
@@ -25,13 +28,20 @@ namespace PresenceFlow.DataAccessLayer
         {
             var normalizedEmail = email.Trim().ToLowerInvariant();
 
-            return await _context.People
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await context.People
+                .AsNoTracking()
                 .SingleOrDefaultAsync(p => p.Email == normalizedEmail);
         }
 
         public async Task<bool> SetPresenceAsync(string email, PresenceStatus status)
         {
-            var person = await GetPersonAsync(email);
+            var normalizedEmail = email.Trim().ToLowerInvariant();
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var person = await context.People.SingleOrDefaultAsync(person => person.Email == normalizedEmail);
 
             if (person == null)
             {
@@ -45,7 +55,7 @@ namespace PresenceFlow.DataAccessLayer
 
             person.UpdateStatus(status);
 
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
 
             return true;
         }
@@ -59,8 +69,9 @@ namespace PresenceFlow.DataAccessLayer
 
             var normalizedEmail = email.Trim().ToLowerInvariant();
 
-            var person = await _context.People
-                .SingleOrDefaultAsync(p => p.Email == normalizedEmail);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var person = await context.People.SingleOrDefaultAsync(person => person.Email == normalizedEmail);
 
             if (person == null)
             {
@@ -69,7 +80,7 @@ namespace PresenceFlow.DataAccessLayer
 
             person.AuthVersion = authVersion;
 
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
 
             return true;
         }

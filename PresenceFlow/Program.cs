@@ -74,7 +74,7 @@ builder.Services.AddAuthorization();
 // Stellt den Login-Status global allen Blazor-Komponenten bereit
 builder.Services.AddCascadingAuthenticationState();
 
-builder.Services.AddDbContext<PresenceDbContext>(options =>
+builder.Services.AddDbContextFactory<PresenceDbContext>(options =>
 {
     var connectionString =
         builder.Configuration.GetConnectionString("DefaultConnection")
