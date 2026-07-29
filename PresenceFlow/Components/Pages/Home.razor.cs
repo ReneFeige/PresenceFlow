@@ -26,6 +26,7 @@ public partial class Home : IAsyncDisposable
     private bool IsLoading { get; set; } = true;
     private bool IsStorageAvailable { get; set; } = true;
     private bool Success { get; set; } = true;
+    private bool IsUpdating { get; set; }
     private ClaimsPrincipal CurrentUser { get; set; } = new(new ClaimsIdentity());
 
     private string ButtonCssClass =>
@@ -95,31 +96,46 @@ public partial class Home : IAsyncDisposable
 
     private async Task LoginLogout()
     {
-        if (Person == null || CurrentUser.Identity?.IsAuthenticated != true)
-        {
-            Success = false;
-            return;
-        }
-
-        var newStatus =
-            Person.Status == PresenceStatus.Absent
-                ? PresenceStatus.Present
-                : PresenceStatus.Absent;
-
-        Success = await PresenceService.SetPresenceForCurrentUserAsync(CurrentUser, newStatus);
-
-        if (!Success)
+        // Mehrfachklick verhindern
+        if (IsUpdating)
         {
             return;
         }
 
-        // E-Mail des aktuellen Benutzers aus den Claims auslesen
-        var email = CurrentUser.FindFirstValue(ClaimTypes.Email);
+        IsUpdating = true;
 
-        if (!string.IsNullOrWhiteSpace(email))
+        try
         {
-            // Status erneut vom Service laden, damit die UI sofort den aktuellen Status anzeigt
-            Person = await PresenceService.GetPersonAsync(email);
+            if (Person == null || CurrentUser.Identity?.IsAuthenticated != true)
+            {
+                Success = false;
+                return;
+            }
+
+            var newStatus =
+                Person.Status == PresenceStatus.Absent
+                    ? PresenceStatus.Present
+                    : PresenceStatus.Absent;
+
+            Success = await PresenceService.SetPresenceForCurrentUserAsync(CurrentUser, newStatus);
+
+            if (!Success)
+            {
+                return;
+            }
+
+            // E-Mail des aktuellen Benutzers aus den Claims auslesen
+            var email = CurrentUser.FindFirstValue(ClaimTypes.Email);
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                // Status erneut vom Service laden, damit die UI sofort den aktuellen Status anzeigt
+                Person = await PresenceService.GetPersonAsync(email);
+            }
+        }
+        finally
+        {
+            IsUpdating = false;
         }
     }
 

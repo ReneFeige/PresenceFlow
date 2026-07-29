@@ -44,8 +44,11 @@
                     }
                 </div>
 
-                <button class="action-button @ButtonCssClass" @onclick="LoginLogout">
-                    @ButtonText
+                <button class="action-button @ButtonCssClass"
+                        @onclick="LoginLogout"
+                        disabled="@IsUpdating">
+
+                    @(IsUpdating ? "⏳ Speichere..." : ButtonText)
                 </button>
 
                 @if (Success == false)
