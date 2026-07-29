@@ -23,41 +23,25 @@
 
         public async Task<IReadOnlyList<Person>> GetPeopleAsync()
         {
-            try
+            var response = await _httpClient.GetAsync(_personenUrl);
+
+            response.EnsureSuccessStatusCode();
+
+            var jsonElement = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+            if (!jsonElement.TryGetProperty("val", out var valElement))
             {
-                var response = await _httpClient.GetAsync(_personenUrl);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    // HTTP erreichbar, aber Anfrage fehlgeschlagen
-                    return [];
-                }
-
-                var jsonElement = await response.Content.ReadFromJsonAsync<JsonElement>();
-
-                // 'val' existiert nicht oder hat unerwartete Struktur
-                if (!jsonElement.TryGetProperty("val", out var valElement))
-                {
-                    return [];
-                }
-
-                // Zugriff auf die 'val'-Eigenschaft (value) von ioBroker
-                var peopleData = valElement.Deserialize<PeopleData>();
-
-                return peopleData?.People ?? [];
+                throw new InvalidOperationException("Die ioBroker-Antwort enthält keine 'val'-Eigenschaft.");
             }
-            catch (HttpRequestException)
+
+            var peopleData = valElement.Deserialize<PeopleData>();
+
+            if (peopleData == null)
             {
-                return [];
+                throw new InvalidOperationException("Die Personendaten aus ioBroker konnten nicht gelesen werden.");
             }
-            catch (JsonException)
-            {
-                return [];
-            }
-            catch (NotSupportedException)
-            {
-                return [];
-            }
+
+            return peopleData.People ?? [];
         }
 
         public async Task<Person?> GetPersonAsync(string email)
