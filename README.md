@@ -14,8 +14,6 @@ Das Projekt entstand ursprünglich während eines Praktikums und wurde anschlie�
 
 ## Hintergrund
 
-## Hintergrund
-
 PresenceFlow entstand ursprünglich als Praktikumsprojekt, das ich eigenständig zur Anwesenheitserfassung entwickelt habe.
 
 Mitarbeitende konnten sich über einen QR-Code im Eingangsbereich bewusst an- oder abmelden. Die Anwendung verwaltete den Anwesenheitsstatus und stellte diesen über ioBroker als zentrale Datenquelle bereit. Andere Systeme, beispielsweise für Alarmanlage, Beleuchtung oder Heizung, konnten diese Informationen anschließend weiterverwenden.
@@ -26,30 +24,29 @@ Dazu wurden unter anderem ein lokaler SQLite-Modus, ein UI-basierter Demo-Modus,
 
 Die Anwendung unterstützt einen lokalen Standalone-Betrieb mit SQLite sowie die Anbindung an ioBroker. Für eine einfache lokale Demonstration steht ein UI-basierter Magic-Link-Modus zur Verfügung, der keinen externen E-Mail-Dienst benötigt.
 
-
 ## Funktionen
 
 * Anmeldung über einmalig verwendbare Magic Links
 * UI-basierter Demo-Modus ohne externen Mailversand
-* optionaler E-Mail-Versand über Azure Communication Services
+* Optionaler E-Mail-Versand über Azure Communication Services
 * Cookie-basierte Authentifizierung
 * Anwesenheitsstatus setzen und anzeigen
 * Live-Aktualisierungen über SignalR
-* lokaler Standalone-Betrieb mit SQLite
-* optionale Speicherung über ioBroker
-* rollenbasierte Benutzerdaten als Grundlage für spätere Erweiterungen
-* globales Abmelden bestehender Sitzungen über eine Authentifizierungsversion
+* Lokaler Standalone-Betrieb mit SQLite
+* Optionale Speicherung über ioBroker
+* Rollenbasierte Benutzerdaten als Grundlage für spätere Erweiterungen
+* Globales Abmelden bestehender Sitzungen über eine Authentifizierungsversion
 
 ## Was dieses Projekt zeigt
 
 PresenceFlow dient als Portfolio-Projekt und demonstriert unter anderem:
 
-* eine mehrschichtige Architektur mit klarer Trennung von UI, Geschäftslogik und Datenzugriff
-* austauschbare Speicherimplementierungen über das Repository Pattern (`SQLite` und `ioBroker`)
+* Eine mehrschichtige Architektur mit klarer Trennung von UI, Geschäftslogik und Datenzugriff
+* Austauschbare Speicherimplementierungen über das Repository-Pattern (`SQLite` und `ioBroker`)
 * Magic-Link-Authentifizierung mit unterschiedlichen Providern für Demo- und Produktivbetrieb
 * Live-Aktualisierung der Anwesenheitsdaten über SignalR
 * Konfigurations- und Sicherheitskonzepte für eine lokal ausführbare ASP.NET-Core-Anwendung
-* die Aufbereitung eines ursprünglich praxisbezogenen Projekts zu einer eigenständig testbaren Portfolio-Anwendung
+* Die Aufbereitung eines ursprünglich praxisbezogenen Projekts zu einer eigenständig testbaren Portfolio-Anwendung
 
 ## Technologien
 
@@ -61,7 +58,7 @@ PresenceFlow dient als Portfolio-Projekt und demonstriert unter anderem:
 * Cookie Authentication
 * Azure Communication Services
 * Dependency Injection
-* Repository Pattern
+* Repository-Pattern
 
 ## Architektur
 
@@ -80,8 +77,8 @@ Die Magic-Link-Authentifizierung ist über einen eigenen Service gekapselt. Je n
 
 ### Voraussetzungen
 
-* installiertes .NET SDK
-* ein aktueller Webbrowser
+* Installiertes .NET SDK
+* Ein aktueller Webbrowser
 
 ### Anwendung starten
 
@@ -109,12 +106,14 @@ Im SQLite-Modus werden vorhandene Entity-Framework-Core-Migrationen beim Start a
 Standardmäßig verwendet die Anwendung den UI-basierten Magic-Link-Demomodus:
 
 ```json
-"MagicLink": {
-  "Provider": "UI"
+{
+  "MagicLink": {
+    "Provider": "UI"
+  }
 }
 ```
 
-Auf der Loginseite stehen zwei Beispielkonten zur Verfügung:
+Auf der Login-Seite stehen zwei Beispielkonten zur Verfügung:
 
 | Rolle         | E-Mail-Adresse             |
 | ------------- | -------------------------- |
@@ -132,11 +131,13 @@ Der UI-Modus dient ausschließlich der lokalen Portfolio-Demonstration und ist n
 Der SQLite-Modus ist für die lokale Demonstration vorgesehen.
 
 ```json
-"ConnectionStrings": {
-  "DefaultConnection": "Data Source=presence.db"
-},
-"Storage": {
-  "Provider": "SQLite"
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Data Source=presence.db"
+  },
+  "Storage": {
+    "Provider": "SQLite"
+  }
 }
 ```
 
@@ -147,11 +148,13 @@ Die lokale Datenbankdatei wird nicht in Git versioniert.
 Für die Verwendung von ioBroker muss der Storage-Provider angepasst werden:
 
 ```json
-"Storage": {
-  "Provider": "IoBroker"
-},
-"IoBroker": {
-  "PersonenObjectUrl": "https://example.com/iobroker-object"
+{
+  "Storage": {
+    "Provider": "IoBroker"
+  },
+  "IoBroker": {
+    "PersonenObjectUrl": "https://example.com/iobroker-object"
+  }
 }
 ```
 
@@ -164,22 +167,24 @@ Ist ioBroker nicht erreichbar oder liefert der konfigurierte Datenpunkt keine g�
 Für den Versand echter Magic Links kann Azure Communication Services verwendet werden.
 
 ```json
-"App": {
-  "BaseUrl": "https://example.com"
-},
-"MagicLink": {
-  "Provider": "Email"
-},
-"AzureEmail": {
-  "ConnectionString": "",
-  "SenderAddress": ""
+{
+  "App": {
+    "BaseUrl": "https://example.com"
+  },
+  "MagicLink": {
+    "Provider": "Email"
+  },
+  "AzureEmail": {
+    "ConnectionString": "",
+    "SenderAddress": ""
+  }
 }
 ```
 
 Für den E-Mail-Modus werden folgende Werte benötigt:
 
 * eine absolute HTTPS-Basis-URL
-* ein gültiger Azure Communication Services Connection String
+* ein gültiger Azure Communication Services Connection-String
 * eine verifizierte Absenderadresse
 
 Die Anwendung validiert diese Einstellungen beim Start.
@@ -240,20 +245,20 @@ Aktuelle Einschränkungen:
 
 Geplante oder mögliche spätere Erweiterungen:
 
-* Unit Tests
+* Unit-Tests
 * Integrationstests
 * GitHub Actions (CI)
 * Docker
 * Azure-Deployment
-* persistente Magic-Link-Tokens
-* Rate Limiting
-* typisierte Options-Klassen
-* erweiterte Rollen- und Rechteverwaltung
+* Persistente Magic-Link-Tokens
+* Rate-Limiting
+* Typisierte Options-Klassen
+* Erweiterte Rollen- und Rechteverwaltung
 * Adminbereich
 * Benutzerverwaltung
 * Anwesenheitshistorie
-* persistente Data-Protection-Keys
-* Health Checks und Monitoring
+* Persistente Data-Protection-Keys
+* Health-Checks und Monitoring
 
 ## Projektstatus
 
