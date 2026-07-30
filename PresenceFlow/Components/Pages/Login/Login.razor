@@ -1,71 +1,164 @@
 ﻿@page "/login"
 
-<PageTitle>Anmeldung</PageTitle>
+<PageTitle>Anmeldung | PresenceFlow</PageTitle>
 
 <div class="login-container">
 
-    <div class="login-card">
+    <main class="login-card">
 
-        <NavLink href="/" class="back-link">
-            ← Zurück
+        <NavLink href="/"
+                 class="back-link">
+            <span aria-hidden="true">←</span>
+            <span>Zurück zur Startseite</span>
         </NavLink>
 
-        <h2 class="title">Anmeldung</h2>
+        <header class="login-heading">
+            <span class="login-eyebrow">
+                Sicherer Zugang
+            </span>
 
-        <p class="subtitle">
-            Bitte geben Sie Ihre E-Mail-Adresse ein.
-        </p>
+            <h1 class="title">
+                Bei PresenceFlow anmelden
+            </h1>
+
+            <p class="subtitle">
+                Geben Sie Ihre E-Mail-Adresse ein. Sie erhalten anschließend
+                einen zeitlich begrenzten Anmeldelink.
+            </p>
+        </header>
 
         @if (IsUiDemo)
         {
-            <div class="demo-hint">
-                <strong>Portfolio-Demo</strong>
+            <section class="demo-hint"
+                     aria-labelledby="demo-title">
 
-                <p>Benutzer:</p>
-                <button class="demo-email-button" @onclick="() => UseDemoEmail(UserDemoEmail)">
-                    @UserDemoEmail
-                </button>
+                <div class="demo-heading">
+                    <span class="demo-badge">
+                        Portfolio-Demo
+                    </span>
 
-                <p>Administrator:</p>
-                <button class="demo-email-button" @onclick="() => UseDemoEmail(AdminDemoEmail)">
-                    @AdminDemoEmail
-                </button>
-            </div>
+                    <p id="demo-title">
+                        Wählen Sie einen vorbereiteten Demo-Zugang:
+                    </p>
+                </div>
+
+                <div class="demo-options">
+
+                    <button type="button"
+                            class="demo-email-button"
+                            disabled="@IsBusy"
+                            @onclick="() => UseDemoEmail(UserDemoEmail)">
+
+                        <span class="demo-role">
+                            Benutzer
+                        </span>
+
+                        <span class="demo-email">
+                            @UserDemoEmail
+                        </span>
+
+                    </button>
+
+                    <button type="button"
+                            class="demo-email-button"
+                            disabled="@IsBusy"
+                            @onclick="() => UseDemoEmail(AdminDemoEmail)">
+
+                        <span class="demo-role">
+                            Administrator
+                        </span>
+
+                        <span class="demo-email">
+                            @AdminDemoEmail
+                        </span>
+
+                    </button>
+
+                </div>
+
+            </section>
         }
 
-        <input class="email-input"
-               type="email"
-               placeholder="E-Mail-Adresse"
-               @bind="Email"
-               disabled="@IsBusy" />
+        <form class="login-form"
+              @onsubmit="SendLink"
+              @onsubmit:preventDefault="true">
 
-        <button class="login-button"
-                @onclick="SendLink"
-                disabled="@IsBusy">
-            @if (IsBusy)
-            {
-                <span>Wird gesendet…</span>
-            }
-            else
-            {
-                <span>Login-Link senden</span>
-            }
-        </button>
+            <div class="form-field">
+
+                <label for="login-email"
+                       class="email-label">
+                    E-Mail-Adresse
+                </label>
+
+                <input id="login-email"
+                       class="email-input"
+                       type="email"
+                       placeholder="name@beispiel.de"
+                       autocomplete="email"
+                       inputmode="email"
+                       spellcheck="false"
+                       autofocus
+                       disabled="@IsBusy"
+                       @bind="Email"
+                       @bind:event="oninput" />
+
+            </div>
+
+            <button type="submit"
+                    class="login-button"
+                    disabled="@IsBusy">
+
+                @if (IsBusy)
+                {
+                    <span class="button-content">
+                        <span class="button-spinner"
+                              aria-hidden="true">
+                        </span>
+
+                        <span>
+                            Login-Link wird erstellt…
+                        </span>
+                    </span>
+                }
+                else
+                {
+                    <span class="button-content">
+                        <span>
+                            Login-Link anfordern
+                        </span>
+
+                        <span class="button-arrow"
+                              aria-hidden="true">
+                            →
+                        </span>
+                    </span>
+                }
+
+            </button>
+
+        </form>
 
         @if (Message != null && LoginLink == null)
         {
             <div class="@MessageCssClass"
-                 role="alert">
+                 role="alert"
+                 aria-live="polite">
                 @Message
             </div>
         }
 
         @if (LoginLink != null)
         {
-            <div class="magic-link-container">
+            <section class="magic-link-container"
+                     aria-labelledby="magic-link-title">
 
-                <div class="alert alert-warning" role="alert">
-                    <strong>Lokaler Demo-Modus</strong>
+                <div class="alert alert-warning"
+                     role="status"
+                     aria-live="polite">
+
+                    <strong id="magic-link-title">
+                        Lokaler Demo-Modus
+                    </strong>
 
                     <p class="mb-2">
                         Der Anmeldelink wird direkt in dieser Oberfläche
@@ -78,16 +171,29 @@
                         Magic-Link-Provider auf
                         <code>Email</code> gesetzt werden.
                     </p>
+
                 </div>
 
                 <a href="@LoginLink"
                    class="login-link">
-                    Jetzt anmelden
+                    <span>Jetzt anmelden</span>
+
+                    <span aria-hidden="true">
+                        →
+                    </span>
                 </a>
 
-            </div>
+            </section>
         }
 
-    </div>
+        <footer class="login-footer">
+            <span aria-hidden="true">🔒</span>
+
+            <span>
+                Die Anmeldung erfolgt ohne Passwort.
+            </span>
+        </footer>
+
+    </main>
 
 </div>
