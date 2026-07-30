@@ -42,7 +42,7 @@ namespace PresenceFlow.Services
             }
 
             // Prüfen, ob die Person existiert
-            var person = await _repository.GetPersonAsync(email);
+            var person = await _repository.GetPersonAsync(normalizedEmail);
 
             if (person == null)
             {
@@ -104,12 +104,21 @@ namespace PresenceFlow.Services
 
             var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
 
-            await emailService.SendAsync(
-                person.Email,
-                "Ihr Login-Link für PresenceFlow",
-                textBody,
-                htmlBody
-            );
+            try
+            {
+                await emailService.SendAsync(
+                    person.Email,
+                    "Ihr Login-Link für PresenceFlow",
+                    textBody,
+                    htmlBody
+                );
+            }
+            catch
+            {
+                // Ein nicht zugestellter Login-Link soll nicht weiter gültig bleiben
+                _tokenStore.Remove(token);
+                throw;
+            }
 
             return new MagicLinkSendResult
             {
