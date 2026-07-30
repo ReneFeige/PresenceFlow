@@ -2,51 +2,142 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @implements IAsyncDisposable
 
-<PageTitle>Anwesende</PageTitle>
+<PageTitle>Anwesende | PresenceFlow</PageTitle>
 
 <div class="present-container">
-    <div class="present-content">
 
-        <NavLink href="/" class="back-link">← Zur Anmeldung</NavLink>
+    <main class="present-card">
 
-        <h2 class="title">Anwesende Personen</h2>
+        <NavLink href="/"
+                 class="back-link">
+            <span aria-hidden="true">←</span>
+            <span>Zurück zur Übersicht</span>
+        </NavLink>
+
+        <header class="present-header">
+
+            <span class="section-eyebrow">
+                Live-Übersicht
+            </span>
+
+            <h1 class="title">
+                Anwesende Personen
+            </h1>
+
+            <p class="header-description">
+                Hier siehst du, wer aktuell als anwesend eingetragen ist.
+            </p>
+
+        </header>
 
         @if (IsLoading)
         {
-            <p class="info-text">⏳ Lade Daten…</p>
+            <section class="loading-state"
+                     role="status"
+                     aria-live="polite">
+
+                <span class="loading-spinner"
+                      aria-hidden="true">
+                </span>
+
+                <p>Anwesenheitsdaten werden geladen…</p>
+
+            </section>
         }
         else
         {
-            <div class="subtitle">
-                Im Moment anwesend: <strong>@PresentCount</strong> 👥
-            </div>
+            <section class="present-summary"
+                     aria-label="Anzahl anwesender Personen">
+
+                <span class="summary-icon"
+                      aria-hidden="true">
+                    👥
+                </span>
+
+                <div class="summary-content">
+
+                    <strong>@PresentCount</strong>
+
+                    <span>
+                        @(PresentCount == 1
+                            ? "Person ist aktuell anwesend"
+                            : "Personen sind aktuell anwesend")
+                    </span>
+
+                </div>
+
+                <span class="live-indicator">
+                    <span class="live-indicator-dot"
+                          aria-hidden="true">
+                    </span>
+
+                    Live
+                </span>
+
+            </section>
 
             @if (PresentPeople.Count == 0)
             {
-                <p class="info-text">
-                    Im Moment ist niemand anwesend.
-                </p>
+                <section class="empty-state"
+                         aria-labelledby="empty-state-title">
+
+                    <div class="empty-state-icon"
+                         aria-hidden="true">
+                        ✓
+                    </div>
+
+                    <h2 id="empty-state-title">
+                        Niemand ist anwesend
+                    </h2>
+
+                    <p>
+                        Aktuell ist keine Person als anwesend eingetragen.
+                    </p>
+
+                </section>
             }
             else
             {
                 <div class="person-list-wrapper">
-                    <ul class="person-list">
+
+                    <ul class="person-list"
+                        aria-label="Aktuell anwesende Personen">
+
                         @foreach (var person in PresentPeople)
                         {
                             <li class="person-item">
-                                <div class="person-name">
-                                    👤 @GetDisplayName(person)
+
+                                <div class="person-avatar"
+                                     aria-hidden="true">
+                                    👤
                                 </div>
 
-                                <div class="person-time">
-                                    @GetPresenceTimeText(person)
+                                <div class="person-details">
+
+                                    <div class="person-name">
+                                        @GetDisplayName(person)
+                                    </div>
+
+                                    <div class="person-time">
+                                        @GetPresenceTimeText(person)
+                                    </div>
+
                                 </div>
+
+                                <span class="presence-badge">
+                                    <span aria-hidden="true"></span>
+                                    Anwesend
+                                </span>
+
                             </li>
                         }
+
                     </ul>
+
                 </div>
             }
         }
 
-    </div>
+    </main>
+
 </div>
