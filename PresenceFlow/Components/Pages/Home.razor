@@ -2,86 +2,225 @@
 @using PresenceFlow.Models
 @implements IAsyncDisposable
 
-<PageTitle>Anmeldung</PageTitle>
+<PageTitle>PresenceFlow</PageTitle>
 
 <div class="home-container">
-    <div class="status-card">
+
+    <main class="status-card">
 
         @if (!IsStorageAvailable)
         {
-            <div class="alert alert-warning">
-                ⚠️ Die Anwesenheitsdaten können momentan nicht geladen werden.<br />
-                Anmeldung ist vorübergehend deaktiviert.
-            </div>
+            <section class="storage-error"
+                     role="alert">
+
+                <span class="status-icon"
+                      aria-hidden="true">
+                    ⚠️
+                </span>
+
+                <div>
+                    <h1>Anwesenheitsdaten nicht verfügbar</h1>
+
+                    <p>
+                        Die Anwesenheitsdaten können momentan nicht geladen
+                        werden. Die Anmeldung ist vorübergehend deaktiviert.
+                    </p>
+                </div>
+
+            </section>
         }
         else
         {
             @if (Person == null)
             {
-                <img src="images/logo.png" alt="PresenceFlow Logo" class="logo" />
-            }
+                <header class="brand-header">
 
+                    <img src="images/logo.png"
+                         alt="PresenceFlow"
+                         class="logo" />
+
+                    <p class="brand-claim">
+                        Anwesenheit einfach erfassen.
+                    </p>
+
+                </header>
+            }
 
             @if (IsLoading)
             {
-                <p>⏳ Lade Daten…</p>
-            }
+                <section class="loading-state"
+                         role="status"
+                         aria-live="polite">
 
+                    <span class="loading-spinner"
+                          aria-hidden="true">
+                    </span>
+
+                    <p>Daten werden geladen…</p>
+
+                </section>
+            }
             else if (Person != null)
             {
-                <div class="person-name">
-                    Hallo @Person.FirstName
-                </div>
+                <section class="person-overview">
 
-                <div class="person-status @(Person.Status == PresenceStatus.Present ? "anwesend" : "abwesend")">
-                    @if (Person.Status == PresenceStatus.Present)
-                    {
-                        <span>🟢 Du bist aktuell anwesend</span>
-                    }
-                    else
-                    {
-                        <span>🔴 Du bist aktuell abwesend</span>
-                    }
-                </div>
+                    <header class="person-header">
 
-                <button class="action-button @ButtonCssClass"
-                        @onclick="LoginLogout"
-                        disabled="@IsUpdating">
+                        <span class="section-eyebrow">
+                            Anwesenheitsübersicht
+                        </span>
 
-                    @(IsUpdating ? "⏳ Speichere..." : ButtonText)
-                </button>
+                        <h1 class="person-name">
+                            Hallo @Person.FirstName
+                            <span aria-hidden="true">👋</span>
+                        </h1>
 
-                @if (Success == false)
-                {
-                    <div class="alert alert-warning">
-                        ⚠️ Die Anwesenheitsdaten können momentan nicht übermittelt werden.<br />
-                        Anmeldung ist vorübergehend deaktiviert.
+                        <p class="person-intro">
+                            Hier kannst du deinen aktuellen
+                            Anwesenheitsstatus verwalten.
+                        </p>
+
+                    </header>
+
+                    <div class="person-status @(Person.Status == PresenceStatus.Present ? "anwesend" : "abwesend")">
+
+                        <span class="status-indicator"
+                              aria-hidden="true">
+                        </span>
+
+                        <div class="status-content">
+
+                            <span class="status-label">
+                                Aktueller Status
+                            </span>
+
+                            <strong>
+                                @(Person.Status == PresenceStatus.Present
+                                    ? "Anwesend"
+                                    : "Abwesend")
+                            </strong>
+
+                        </div>
+
                     </div>
-                }
 
-                <div class="present-count">
-                    Im Moment anwesend: <strong>@PresentCount</strong> 👥
-                </div>
+                    <button class="action-button @ButtonCssClass"
+                            type="button"
+                            @onclick="LoginLogout"
+                            disabled="@IsUpdating">
 
-                <div class="logout-container">
-                    <p class="logout-text">
-                        Nicht @Person.FirstName? Gerät mit anderen teilen?
-                    </p>
+                        @if (IsUpdating)
+                        {
+                            <span class="button-content">
+                                <span class="button-spinner"
+                                      aria-hidden="true">
+                                </span>
 
-                    <button class="logout-button" @onclick="LogoutFromApp">
-                        Logout
+                                <span>Speichere Status…</span>
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="button-content">
+                                <span>@ButtonText</span>
+
+                                <span class="button-arrow"
+                                      aria-hidden="true">
+                                    →
+                                </span>
+                            </span>
+                        }
+
                     </button>
-                </div>
+
+                    @if (Success == false)
+                    {
+                        <div class="status-message"
+                             role="alert">
+
+                            <span aria-hidden="true">⚠️</span>
+
+                            <span>
+                                Die Anwesenheitsdaten konnten momentan
+                                nicht übermittelt werden. Bitte versuche
+                                es später erneut.
+                            </span>
+
+                        </div>
+                    }
+
+                    <div class="present-count">
+
+                        <span class="present-count-icon"
+                              aria-hidden="true">
+                            👥
+                        </span>
+
+                        <div>
+                            <strong>@PresentCount</strong>
+
+                            <span>
+                                @(PresentCount == 1
+                                    ? "Person ist aktuell anwesend"
+                                    : "Personen sind aktuell anwesend")
+                            </span>
+                        </div>
+
+                    </div>
+
+                    <footer class="logout-container">
+
+                        <p class="logout-text">
+                            Nicht @Person.FirstName oder wird dieses Gerät
+                            von mehreren Personen verwendet?
+                        </p>
+
+                        <button class="logout-button"
+                                type="button"
+                                @onclick="LogoutFromApp">
+                            Abmelden
+                        </button>
+
+                    </footer>
+
+                </section>
             }
             else
             {
-                <div class="not-logged-in">
-                    <p>Willkommen!</p>
-                    <p>Bitte melde dich an, um deine Anwesenheit zu erfassen.</p>
-                    <NavLink href="/login" class="login-link">Jetzt anmelden</NavLink>
-                </div>
+                <section class="not-logged-in">
+
+                    <span class="section-eyebrow">
+                        Sicherer Zugang
+                    </span>
+
+                    <h1>Willkommen</h1>
+
+                    <p>
+                        Melde dich an, um deine Anwesenheit einfach und
+                        sicher zu erfassen.
+                    </p>
+
+                    <NavLink href="/login"
+                             class="login-link">
+                        <span>Jetzt anmelden</span>
+
+                        <span aria-hidden="true">
+                            →
+                        </span>
+                    </NavLink>
+
+                    <div class="login-note">
+                        <span aria-hidden="true">🔒</span>
+
+                        <span>
+                            Die Anmeldung erfolgt ohne Passwort.
+                        </span>
+                    </div>
+
+                </section>
             }
         }
-    </div>
+
+    </main>
 
 </div>
