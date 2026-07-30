@@ -42,5 +42,10 @@ namespace PresenceFlow.Auth
 
             return false;
         }
+
+        public bool Remove(string token)
+        {
+            return _tokens.TryRemove(token, out _);
+        }
     }
 }
