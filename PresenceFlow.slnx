@@ -2,5 +2,6 @@
   <Folder Name="/Projektmappenelemente/">
     <File Path="README.md" />
   </Folder>
+  <Project Path="PresenceFlow.Tests/PresenceFlow.Tests.csproj" Id="119b896d-df47-4d2d-b9f6-ad4cc8e38d33" />
   <Project Path="PresenceFlow/PresenceFlow.csproj" />
 </Solution>
